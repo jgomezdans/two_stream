@@ -1,0 +1,25 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module TwoSInterface ! in 
+    interface  ! in :TwoSInterface
+        subroutine twostream_solver(leaf_reflectance,leaf_transmittance,background_reflectance,true_lai,structure_factor_zeta,structure_factor_zetastar,sun_zenith_angle_degrees,collim_alb_tot,collim_tran_tot,collim_abs_tot,isotrop_alb_tot,isotrop_tran_tot,isotrop_abs_tot) ! in :TwoSInterface:TwoSInterface.f90
+            real(kind=8) intent(in) :: leaf_reflectance
+            real(kind=8) intent(in) :: leaf_transmittance
+            real(kind=8) intent(in) :: background_reflectance
+            real(kind=8) intent(in) :: true_lai
+            real(kind=8) intent(in) :: structure_factor_zeta
+            real(kind=8) intent(in) :: structure_factor_zetastar
+            real(kind=8) intent(in) :: sun_zenith_angle_degrees
+            real(kind=8) intent(out) :: collim_alb_tot
+            real(kind=8) intent(out) :: collim_tran_tot
+            real(kind=8) intent(out) :: collim_abs_tot
+            real(kind=8) intent(out) :: isotrop_alb_tot
+            real(kind=8) intent(out) :: isotrop_tran_tot
+            real(kind=8) intent(out) :: isotrop_abs_tot
+        end subroutine twostream_solver
+    end interface 
+end python module TwoSInterface
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/
