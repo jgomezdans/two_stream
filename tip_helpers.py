@@ -95,8 +95,8 @@ class StandardStateTIP ( State ):
         self.n_params = self._state_vector_size ()
         self.parameter_min = OrderedDict()
         self.parameter_max = OrderedDict()
-        min_vals = [ 0.8, 0.2, 0.0, 0.0, 0.0043, 0.0017,0.0001, 0, 0., -1., -1.]
-        max_vals = [2.5, 77., 5., 1., 0.0753, 0.0331, 10., 90., 2., 1.]
+        min_vals = [ 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,0.01 ]
+        max_vals = [ 0.9, 4., 0.9, 0.9, 4., 0.9, 8 ]
 
         for i, param in enumerate ( state_config.keys() ):
             self.parameter_min[param] = min_vals[i]
@@ -109,20 +109,14 @@ class StandardStateTIP ( State ):
                 self.parameter_max[param]*1.1 ] )
             # Define parameter transformations
         transformations = {
-                'lai': lambda x: np.exp ( -x/2. ), \
-                'cab': lambda x: np.exp ( -x/100. ), \
-                'car': lambda x: np.exp ( -x/100. ), \
-                'cw': lambda x: np.exp ( -50.*x ), \
-                'cm': lambda x: np.exp ( -100.*x ), \
-                'ala': lambda x: x/90. }
+                'lai': lambda x: np.exp ( -3.*x/2. ), 
+                'd_nir': lambda x: np.exp ( -x ), 
+                'd_vis': lambda x: np.exp ( -x ) }
         inv_transformations = {
-                'lai': lambda x: -2*np.log ( x ), \
-                'cab': lambda x: -100*np.log ( x ), \
-                'car': lambda x: -100*np.log( x ), \
-                'cw': lambda x: (-1/50.)*np.log ( x ), \
-                'cm': lambda x: (-1/100.)*np.log ( x ), \
-                'ala': lambda x: 90.*x }
-
+                'lai': lambda x: -1.5*np.log ( x ), 
+                'd_nir': lambda x: -np.log ( x ), 
+                'd_vis': lambda x: -np.log( x ) }
+        
         
         self.set_transformations ( transformations, inv_transformations )
 
