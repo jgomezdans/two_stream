@@ -63,6 +63,7 @@ def download_and_process_obs ( longitude, latitude, year ):
         "BRDF_Albedo_Parameters_nir.Num_Parameters_03", year_start, year_end )
     ws_albedo_nir =  1.0*nir_par1 + 0.189184*nir_par2 -1.377622*nir_par3
     
+    
     ( t_step, albedo_qa )= get_modis_data( longitude, latitude, "MCD43A2", \
         "BRDF_Albedo_Ancillary", year_start, year_end )
     sun_angle = []
@@ -166,12 +167,12 @@ if __name__ == "__main__":
     
     #( options, args ) = process_cli ()
     obs = Observations ( "albedo.sql")
-    with open ("fluxnet_sites.txt", 'r') as fp:
+    with open ("fluxnet_sites_set.txt", 'r') as fp:
         for line in fp:
             if not line.startswith("#"):
                 (site,site_code,nyears,lat,lon,lc1,lc2) = line.split(";")
                 print "Grabbing %s (%s)->(%s)" % ( site_code, lc1, lc2)
-                for year in xrange (2001, 2015):
+                for year in xrange (2004,2014):
                     print "\tYear %d" % year
                     x = obs.query ( year, site_code.replace("'",""), 
                                    longitude=float(lon), 
