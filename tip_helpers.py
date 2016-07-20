@@ -205,6 +205,17 @@ class ObservationOperatorTIP ( object ):
         self.fwd_modelled_obs = []
         istart_doy = self.state_grid[0]
         
+        # At this point, we have an array of parameters. Some will need to be
+        # ferried over to the VIS GP, and the others to the NIR GP
+        # 
+        # At this stage, we could run the GPs for all times, and the loop below
+        # would do the comparisons, gradients, etc.
+        # In other words, we would prepare the class so that calc_mismatch
+        # uses the GP output from here
+        self.fwd_albedo_vis, self.dfwd_albedo_vis= self.emulators[0].predict (
+                            x_params[[0,1,2,6], :] )
+        self.fwd_albedo_nir, self.dfwd_albedo_nir = self.emulators[0].predict ( 
+                            x_params[[3,4,5,6], :] )
         for itime, tstep in enumerate ( self.state_grid[1:] ):
             # Select all observations between istart_doy and tstep
             sel_obs = np.where ( np.logical_and ( self.mask[:, 0] > istart_doy, \
@@ -224,11 +235,9 @@ class ObservationOperatorTIP ( object ):
             # And add the cost/der_cost contribution from each.
             
             for this_obs_loc in sel_obs.nonzero()[0]:
-                this_obsop, this_obs, this_extra = self.time_step ( \
-                    this_obs_loc )
+                this_obs = self.time_step ( this_obs_loc )
                 this_cost, this_der, fwd_model, this_gradient = \
-                    self.calc_mismatch ( this_obsop, x_params[:, itime], \
-                    this_obs, self.bu, *this_extra )
+                    self.calc_mismatch ( itime, this_obs, self.bu )
                 self.fwd_modelled_obs.append ( fwd_model ) # Store fwd model
                 cost += this_cost
                 the_derivatives[ :, itime] += this_der
@@ -250,15 +259,25 @@ class ObservationOperatorTIP ( object ):
     def time_step ( self, this_loc ):
         """Returns relevant information on the observations for a particular time step.
         """
-        tag = np.round( self.mask[ this_loc, 1:].astype (np.int)/5.)*5
-        tag = tuple ( (tag[:2].astype(np.int)).tolist() )
         this_obs = self.observations[ this_loc, :]
-        return self.emulators[tag], this_obs, [ self.band_pass, self.bw ]
+        return this_obs
     
-    def calc_mismatch ( self, gp, x, obs, bu, band_pass, bw ):
-        this_cost, this_der, fwd, gradient = fwd_model ( gp, x, obs, bu, \
-            band_pass, bw )
-        return this_cost, this_der, fwd, gradient
+    def calc_mismatch ( self, itime, obs, bu ):
+        
+        cost = 0.
+        der_cost = []
+        gradient = []
+        fwd = [self.fwd_albedo_vis[itime], self.fwd_albedo_nir[itime] ]
+        d = self.fwd_albedo_vis[itime] - obs[0]
+        gradient.append ( self.dfwd_albedo_vis[itime] )
+        derivs = d*self.dfwd_albedo_vis[itime]/(bu[0]**2)
+        cost += 0.5*d*d/(bu[0]**2)
+        d = self.fwd_albedo_nir[itime] - obs[1]
+        gradient.append ( self.dfwd_albedo_nir[itime] )
+        derivs = d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
+        cost += 0.5*d*d/(bu[1]**2)
+
+        return cost, der_cost, fwd, gradient
     
     
     def der_der_cost ( self, x_dict, state_config, state, epsilon=1.0e-5 ):
