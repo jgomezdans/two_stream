@@ -262,7 +262,29 @@ class ObservationOperatorTIP ( object ):
         this_obs = self.observations[ this_loc, :]
         return this_obs
     
+    def time_step2 ( self, this_loc ):
+        """Needed for the Hessian calculations"""
+        this_obs = self.observations[ this_loc, :]
+        return self.emulators, this_obs, [None, None]
+    
+    def calc_mismatch2 ( self, gp, xs, this_obs, bu, *this_extra ):
+        """Needed for the Hessian calculations"""
+        # first vis...
+        fwd, dfwd = gp[0].predict ( xs[ [0,1,2,6] ] )
+        d = fwd - obs[0]
+        derivs = d*dfwd/bu[0]**2    
+        # then nir
+        fwd, dfwd = gp[1].predict ( xs[ [3,4,5,6] ] )
+        d = fwd - obs[1]
+        derivs += d*dfwd/bu[1]**2    
+        return None, derivs, None, None
+    
+    
     def calc_mismatch ( self, itime, obs, bu ):
+        """Simplified mismatch function assuming that both the forward model
+        and associated Jacobian of the forward model have already been 
+        calculated and are stored in e.g. `self.fwd_albedo{vis,nir}`. There are
+        some assumptions about the data storage made at this stage!"""
         
         cost = 0.
         der_cost = []
@@ -274,8 +296,10 @@ class ObservationOperatorTIP ( object ):
         cost += 0.5*d*d/(bu[0]**2)
         d = self.fwd_albedo_nir[itime] - obs[1]
         gradient.append ( self.dfwd_albedo_nir[itime] )
-        derivs = d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
+        derivs += d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
         cost += 0.5*d*d/(bu[1]**2)
+        der_cost = derivs # I *think*
+        # der_cost 
 
         return cost, der_cost, fwd, gradient
     
