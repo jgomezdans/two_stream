@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
+import scipy.sparse as sp
+import matplotlib.pyplot as plt
 
 
 import eoldas_ng 
@@ -43,7 +45,32 @@ import numpy as np
 import time
 
 from collections import OrderedDict
-from eoldas_ng import State, MetaState
+from eoldas_ng import State, MetaState, CONSTANT, VARIABLE, FIXED
+
+
+def get_problem_size ( x_dict, state_config, state_grid=None ):
+    """This function reports
+    1. The number of parameters `n_params`
+    2. The size of the state
+
+    Parameters
+    -----------
+    x_dict: dict
+        An (ordered) dictionary with the state
+    state_config: dict
+        A state configuration ordered dictionary
+    """
+    n_params = 0
+    for param, typo in state_config.iteritems():
+        if typo == CONSTANT:
+            n_params += 1
+        elif typo == VARIABLE:
+            if state_grid is None:
+                n_elems = x_dict[param].size
+            else:
+                n_elems = state_grid.sum()
+            n_params += n_elems
+    return n_params, n_elems
 
 class StandardStateTIP ( State ):
     """A standard state configuration for the PROSAIL model"""
@@ -66,12 +93,12 @@ class StandardStateTIP ( State ):
 
         # Now define the default values
         self.default_values = OrderedDict ()
-        self.default_values['omega_vis'] = 1.6
-        self.default_values['d_vis'] = 20.
-        self.default_values['a_vis'] = 1.
-        self.default_values['omega_nir'] = 0.01
-        self.default_values['d_nir'] = 0.018 # Say?
-        self.default_values['a_nir'] = 0.03 # Say?
+        self.default_values['omega_vis'] = 0.17
+        self.default_values['d_vis'] = 2.
+        self.default_values['a_vis'] = .1
+        self.default_values['omega_nir'] = 0.7
+        self.default_values['d_nir'] = 2 # Say?
+        self.default_values['a_nir'] = 0.18 # Say?
         self.default_values['lai'] = 2
         
         self.metadata = MetaState()
@@ -96,7 +123,7 @@ class StandardStateTIP ( State ):
         self.parameter_min = OrderedDict()
         self.parameter_max = OrderedDict()
         min_vals = [ 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,0.01 ]
-        max_vals = [ 0.9, 4., 0.9, 0.9, 4., 0.9, 8 ]
+        max_vals = [ 0.99, 4., 0.99, 0.99, 4., 0.99, 6 ]
 
         for i, param in enumerate ( state_config.keys() ):
             self.parameter_min[param] = min_vals[i]
@@ -139,7 +166,7 @@ class ObservationOperatorTIP ( object ):
         self.state = state
         self.observations = observations
         try:
-            self.n_bands, self.n_obs = self.observations.shape
+            self.n_obs, self.n_bands = self.observations.shape
         except:
             raise ValueError, "Typically, obs should be (n_obs, n_bands)"
         self.mask = mask
@@ -151,7 +178,7 @@ class ObservationOperatorTIP ( object ):
         self.band_pass = band_pass
         self.bw = bw
 
-        
+        plt.plot( self.mask[:,0], self.observations[:,1], 'o')
     
     def der_cost ( self, x_dict, state_config ):
 
@@ -213,9 +240,9 @@ class ObservationOperatorTIP ( object ):
         # In other words, we would prepare the class so that calc_mismatch
         # uses the GP output from here
         self.fwd_albedo_vis, self.dfwd_albedo_vis= self.emulators[0].predict (
-                            x_params[[0,1,2,6], :] )
-        self.fwd_albedo_nir, self.dfwd_albedo_nir = self.emulators[0].predict ( 
-                            x_params[[3,4,5,6], :] )
+                            x_params[[0,1,2,6], :].T, do_unc=False )
+        self.fwd_albedo_nir, self.dfwd_albedo_nir = self.emulators[1].predict ( 
+                            x_params[[3,4,5,6], :].T, do_unc=False )
         for itime, tstep in enumerate ( self.state_grid[1:] ):
             # Select all observations between istart_doy and tstep
             sel_obs = np.where ( np.logical_and ( self.mask[:, 0] > istart_doy, \
@@ -235,15 +262,15 @@ class ObservationOperatorTIP ( object ):
             # And add the cost/der_cost contribution from each.
             
             for this_obs_loc in sel_obs.nonzero()[0]:
-                this_obs = self.time_step ( this_obs_loc )
+                this_obs, bu = self.time_step ( this_obs_loc )
                 this_cost, this_der, fwd_model, this_gradient = \
-                    self.calc_mismatch ( itime, this_obs, self.bu )
+                    self.calc_mismatch ( itime, this_obs, bu )
                 self.fwd_modelled_obs.append ( fwd_model ) # Store fwd model
                 cost += this_cost
                 the_derivatives[ :, itime] += this_der
             # Advance istart_doy to the end of this period
             istart_doy = tstep
-            
+        
         j = 0
         for  i, (param, typo) in enumerate ( state_config.iteritems()) :
             if typo == CONSTANT:
@@ -260,23 +287,43 @@ class ObservationOperatorTIP ( object ):
         """Returns relevant information on the observations for a particular time step.
         """
         this_obs = self.observations[ this_loc, :]
-        return this_obs
+        bu = self.bu
+        return this_obs, bu
     
     def time_step2 ( self, this_loc ):
         """Needed for the Hessian calculations"""
         this_obs = self.observations[ this_loc, :]
         return self.emulators, this_obs, [None, None]
     
-    def calc_mismatch2 ( self, gp, xs, this_obs, bu, *this_extra ):
+    def calc_mismatch2 ( self, xs, obs, bu, *this_extra ):
         """Needed for the Hessian calculations"""
+        cost = 0.
+        der_cost = np.zeros(7)
+        gradient = np.zeros(7)
+        derivs = np.zeros(7)
+        vis_posns = np.array ( [0,1,2,6 ])
+        nir_posns = np.array ( [3,4,5,6 ] )
+
+        fwd_albedo_vis, dfwd_albedo_vis = self.emulators[0].predict ( 
+                    np.atleast_2d(xs[vis_posns]), do_unc=False)
+        fwd_albedo_nir, dfwd_albedo_nir = self.emulators[1].predict ( 
+            np.atleast_2d(xs[nir_posns]), do_unc=False)
+        dfwd_albedo_vis = dfwd_albedo_vis.squeeze()
+        dfwd_albedo_nir = dfwd_albedo_nir.squeeze()
         # first vis...
-        fwd, dfwd = gp[0].predict ( xs[ [0,1,2,6] ] )
-        d = fwd - obs[0]
-        derivs = d*dfwd/bu[0]**2    
-        # then nir
-        fwd, dfwd = gp[1].predict ( xs[ [3,4,5,6] ] )
-        d = fwd - obs[1]
-        derivs += d*dfwd/bu[1]**2    
+        fwd = [fwd_albedo_vis, fwd_albedo_nir]
+        d = fwd_albedo_vis - obs[0]
+        gradient[vis_posns] = dfwd_albedo_vis 
+        derivs[vis_posns] = d*dfwd_albedo_vis/(bu[0]**2)
+        cost += 0.5*d*d/(bu[0]**2)
+        d = fwd_albedo_nir - obs[1]
+        gradient[nir_posns] = dfwd_albedo_nir 
+        
+        derivs[nir_posns] += d*dfwd_albedo_nir/(bu[1]**2)
+        cost += 0.5*d*d/(bu[1]**2)
+        der_cost = derivs # I *think*
+        # der_cost 
+
         return None, derivs, None, None
     
     
@@ -287,16 +334,20 @@ class ObservationOperatorTIP ( object ):
         some assumptions about the data storage made at this stage!"""
         
         cost = 0.
-        der_cost = []
-        gradient = []
+        der_cost = np.zeros(7)
+        gradient = np.zeros(7)
+        derivs = np.zeros(7)
+        vis_posns = np.array ( [0,1,2,6 ])
+        nir_posns = np.array ( [3,4,5,6 ] )
         fwd = [self.fwd_albedo_vis[itime], self.fwd_albedo_nir[itime] ]
         d = self.fwd_albedo_vis[itime] - obs[0]
-        gradient.append ( self.dfwd_albedo_vis[itime] )
-        derivs = d*self.dfwd_albedo_vis[itime]/(bu[0]**2)
+        gradient[vis_posns] = self.dfwd_albedo_vis[itime] 
+        derivs[vis_posns] = d*self.dfwd_albedo_vis[itime]/(bu[0]**2)
         cost += 0.5*d*d/(bu[0]**2)
         d = self.fwd_albedo_nir[itime] - obs[1]
-        gradient.append ( self.dfwd_albedo_nir[itime] )
-        derivs += d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
+        gradient[nir_posns] = self.dfwd_albedo_nir[itime] 
+        
+        derivs[nir_posns] += d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
         cost += 0.5*d*d/(bu[1]**2)
         der_cost = derivs # I *think*
         # der_cost 
@@ -385,11 +436,10 @@ class ObservationOperatorTIP ( object ):
             # And add the cost/der_cost contribution from each.
             for this_obs_loc in sel_obs.nonzero()[0]:
                 
-                this_obsop, this_obs, this_extra = self.time_step ( \
-                    this_obs_loc )
+                this_obs, bu = self.time_step ( this_obs_loc )
                 xs = x_params[:, itime]*1
-                dummy, df_0, dummy_fwd, dummy_gradient = self.calc_mismatch ( this_obsop, \
-                    xs, this_obs, self.bu, *this_extra )
+                dummy, df_0, dummy_fwd, dummy_gradient = self.calc_mismatch2 ( 
+                    xs, this_obs,bu )
                 iloc = 0
                 iiloc = 0
                 for i,fin_diff in enumerate(param_pattern):
@@ -397,8 +447,8 @@ class ObservationOperatorTIP ( object ):
                         continue                    
                     xxs = xs[i]*1
                     xs[i] += epsilon
-                    dummy, df_1, dummy_fwd, dummy_gradient = self.calc_mismatch ( this_obsop, \
-                        xs, this_obs, self.bu, *this_extra )                    # Calculate d2f/d2x
+                    dummy, df_1, dummy_fwd, dummy_gradient = self.calc_mismatch2 (
+                        xs, this_obs, bu )                    # Calculate d2f/d2x
                     hs =  (df_1 - df_0)/epsilon
                     if fin_diff == 2: # CONSTANT
                         iloc += 1
@@ -424,4 +474,80 @@ class ObservationOperatorTIP ( object ):
         
 
 
+def the_prior ( state ):
+    mu_prior = OrderedDict ()
+    prior_inv_cov= OrderedDict ()
+    prior_inv_cov['omega_vis'] = np.array ( [.1])
+    prior_inv_cov['d_vis'] = np.array ( [0.7])
+    prior_inv_cov['a_vis'] = np.array ( [.0.959])
+    prior_inv_cov['omega_nir'] = np.array ([0.08] )
+    prior_inv_cov['d_nir'] = np.array ([1.5] )
+    prior_inv_cov['a_nir'] = np.array ([.2] )
+    prior_inv_cov['lai'] = np.array ([5] )
+    
+
+    for param in state.parameter_min.iterkeys():
+        if state.transformation_dict.has_key ( param ):
+            mu_prior[param] = state.transformation_dict[param]( 
+                np.array([state.default_values[param]]) )
+        else:
+            mu_prior[param] = np.array([state.default_values[param]])
+            prior_inv_cov[param] = 1./prior_inv_cov[param]**2
+            
+    print "====>>> NO SOIL COVARIANCE TERM YET <<<====="
+    prior = Prior ( mu_prior, prior_inv_cov )
+    return prior
+
+if __name__ == "__main__":
+    import cPickle
+    from collections import OrderedDict
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    import gp_emulator
+    from eoldas_ng import *
+    from tip_helpers import StandardStateTIP, ObservationOperatorTIP
+
+    state_config = OrderedDict()
+    state_config['omega_vis'] = VARIABLE
+    state_config['d_vis'] = VARIABLE
+    state_config['a_vis'] = VARIABLE
+    state_config['omega_nir'] = VARIABLE
+    state_config['d_nir'] = VARIABLE
+    state_config['a_nir'] = VARIABLE
+    state_config['lai'] = VARIABLE
+
+    optimisation_options = {'ftol': 1./10000, 'gtol':1e-12, 
+                            'maxcor':300, 'maxiter':1500 }
+    state_grid = np.arange(0, 366, 16)
+
+    the_state = StandardStateTIP ( state_config, state_grid, verbose=True,
+                                  optimisation_options=optimisation_options)
+
+
+    gp_vis = cPickle.load(open("tip_vis_albedo_transformed.pkl", 'r'))
+    gp_nir = cPickle.load(open("tip_nir_albedo_transformed.pkl", 'r'))
+
+    obs = np.loadtxt("synthetic_albedo.txt")
+    lai = obs[:,-1]
+    mask = np.c_[ obs[:,0], np.ones(obs.shape[0]) ]
+    observations = obs[:,1:-1]
+    # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
+    # Min of 2.5e-3
+
+    obsop = ObservationOperatorTIP ( state_grid, the_state, observations,
+                mask, [gp_vis, gp_nir], np.array([0.01, 0.01]) )
+
+    x_dict = OrderedDict()
+    x_dict['omega_vis'] = np.ones_like ( state_grid )*0.5
+    x_dict['d_vis'] = np.exp(-1.*np.ones_like ( state_grid))
+    x_dict['a_vis'] = np.ones_like ( state_grid)*0.1
+    x_dict['omega_nir'] = np.ones_like ( state_grid )*0.1
+    x_dict['d_nir'] = np.exp(-2.*np.ones_like ( state_grid))
+    x_dict['a_nir'] = np.ones_like ( state_grid)*0.18
+    x_dict['lai'] = np.ones_like(state_grid)*0.#np.interp(state_grid, obs[:,0], lai)
+    the_state.add_operator("Obs", obsop)
+    prior = the_prior(the_state)
+    the_state.add_operator ("Prior", prior )
+    retval = the_state.optimize(x_dict, do_unc=True)
 
