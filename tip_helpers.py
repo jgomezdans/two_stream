@@ -479,7 +479,7 @@ def the_prior ( state ):
     prior_inv_cov= OrderedDict ()
     prior_inv_cov['omega_vis'] = np.array ( [.1])
     prior_inv_cov['d_vis'] = np.array ( [0.7])
-    prior_inv_cov['a_vis'] = np.array ( [.0.959])
+    prior_inv_cov['a_vis'] = np.array ( [0.959])
     prior_inv_cov['omega_nir'] = np.array ([0.08] )
     prior_inv_cov['d_nir'] = np.array ([1.5] )
     prior_inv_cov['a_nir'] = np.array ([.2] )
