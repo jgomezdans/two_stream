@@ -174,9 +174,12 @@ if __name__ == "__main__":
                 print "Grabbing %s (%s)->(%s)" % ( site_code, lc1, lc2)
                 for year in xrange (2004,2014):
                     print "\tYear %d" % year
-                    x = obs.query ( year, site_code.replace("'",""), 
+                    try:
+                        x = obs.query ( year, site_code.replace("'",""), 
                                    longitude=float(lon), 
                                    latitude=float(lat) )
+                    except:
+                        print "It seems I can't do it"
                     
                     
             
