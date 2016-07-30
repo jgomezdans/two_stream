@@ -150,6 +150,10 @@ class StandardStateTIP ( State ):
         
         self._set_optimisation_options ( optimisation_options )
         self._create_output_file ( output_name )
+        self.cost_history = { 'global': [],
+                              'iteration': [] }
+        self.iterations = 0
+        self.iterations_vector = []
         
 
 class ObservationOperatorTIP ( object ):
@@ -314,13 +318,13 @@ class ObservationOperatorTIP ( object ):
         fwd = [fwd_albedo_vis, fwd_albedo_nir]
         d = fwd_albedo_vis - obs[0]
         gradient[vis_posns] = dfwd_albedo_vis 
-        derivs[vis_posns] = d*dfwd_albedo_vis/(bu[0]**2)
-        cost += 0.5*d*d/(bu[0]**2)
+        derivs[vis_posns] = d*dfwd_albedo_vis/(bu[vis_posns, 0]**2)
+        cost += 0.5*d*d/(bu[vis_posns,0]**2)
         d = fwd_albedo_nir - obs[1]
         gradient[nir_posns] = dfwd_albedo_nir 
         
-        derivs[nir_posns] += d*dfwd_albedo_nir/(bu[1]**2)
-        cost += 0.5*d*d/(bu[1]**2)
+        derivs[nir_posns] += d*dfwd_albedo_nir/(bu[nir_posns, 1]**2)
+        cost += 0.5*d*d/(bu[nir_posns, 1]**2)
         der_cost = derivs # I *think*
         # der_cost 
 
@@ -342,17 +346,17 @@ class ObservationOperatorTIP ( object ):
         fwd = [self.fwd_albedo_vis[itime], self.fwd_albedo_nir[itime] ]
         d = self.fwd_albedo_vis[itime] - obs[0]
         gradient[vis_posns] = self.dfwd_albedo_vis[itime] 
-        derivs[vis_posns] = d*self.dfwd_albedo_vis[itime]/(bu[0]**2)
-        cost += 0.5*d*d/(bu[0]**2)
+        derivs[vis_posns] = d*self.dfwd_albedo_vis[itime]/(bu[vis_posns, 0]**2)
+        cost += 0.5*d*d/(bu[vis_posns, 0]**2)
         d = self.fwd_albedo_nir[itime] - obs[1]
         gradient[nir_posns] = self.dfwd_albedo_nir[itime] 
         
-        derivs[nir_posns] += d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
-        cost += 0.5*d*d/(bu[1]**2)
+        derivs[nir_posns] += d*self.dfwd_albedo_nir[itime]/(bu[nir_posns, 1]**2)
+        cost += 0.5*d*d/(bu[nir_posns, 1]**2)
         der_cost = derivs # I *think*
         # der_cost 
 
-        return cost, der_cost, fwd, gradient
+        return cost.sum(), der_cost, fwd, gradient
     
     
     def der_der_cost ( self, x_dict, state_config, state, epsilon=1.0e-5 ):
@@ -507,6 +511,7 @@ if __name__ == "__main__":
     import gp_emulator
     from eoldas_ng import *
     from tip_helpers import StandardStateTIP, ObservationOperatorTIP
+    from get_albedo import Observations
 
     state_config = OrderedDict()
     state_config['omega_vis'] = VARIABLE
@@ -519,7 +524,7 @@ if __name__ == "__main__":
 
     optimisation_options = {'ftol': 1./10000, 'gtol':1e-12, 
                             'maxcor':300, 'maxiter':1500 }
-    state_grid = np.arange(0, 366, 16)
+    state_grid = np.arange(0, 366, 8)
 
     the_state = StandardStateTIP ( state_config, state_grid, verbose=True,
                                   optimisation_options=optimisation_options)
@@ -528,25 +533,48 @@ if __name__ == "__main__":
     gp_vis = cPickle.load(open("tip_vis_albedo_transformed.pkl", 'r'))
     gp_nir = cPickle.load(open("tip_nir_albedo_transformed.pkl", 'r'))
 
-    obs = np.loadtxt("synthetic_albedo.txt")
-    lai = obs[:,-1]
-    mask = np.c_[ obs[:,0], np.ones(obs.shape[0]) ]
-    observations = obs[:,1:-1]
+    obs = Observations ( "albedo.sql" )
+    albedo_data = obs.query( 2009, "US-Bo1" )
+    passer = albedo_data.albedo_qa != 255
+    doys = albedo_data.doy[passer]
+    observations = np.c_ [ albedo_data.bhr_vis[passer], 
+                     albedo_data.bhr_nir[passer] ]
+    full_inversions = albedo_data.albedo_qa[passer] == 0
+    backup_inversions = albedo_data.albedo_qa[passer] == 1
+    no_snow = albedo_data.snow_qa[passer] == 0
+    mask = np.c_[ doys, doys.astype(np.int)*0 + 1 ]
+    bu = observations*0.0
+    for i in xrange(2):
+        bu[full_inversions, i] = np.min ( np.c_[
+            np.ones_like (doys[full_inversions])*2.5e-3, 
+            observations[full_inversions,i]*0.05], axis=1)
+        bu[backup_inversions, i] = np.min ( np.c_[
+            np.ones_like (doys[backup_inversions])*2.5e-3, 
+            observations[backup_inversions,i]*0.05], axis=1)
+
     # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
     # Min of 2.5e-3
 
+    #bu = np.sqrt(bu)
     obsop = ObservationOperatorTIP ( state_grid, the_state, observations,
-                mask, [gp_vis, gp_nir], np.array([0.01, 0.01]) )
+                mask, [gp_vis, gp_nir], bu )
 
     x_dict = OrderedDict()
-    x_dict['omega_vis'] = np.ones_like ( state_grid )*0.5
-    x_dict['d_vis'] = np.exp(-1.*np.ones_like ( state_grid))
-    x_dict['a_vis'] = np.ones_like ( state_grid)*0.1
-    x_dict['omega_nir'] = np.ones_like ( state_grid )*0.1
-    x_dict['d_nir'] = np.exp(-2.*np.ones_like ( state_grid))
-    x_dict['a_nir'] = np.ones_like ( state_grid)*0.18
-    x_dict['lai'] = np.ones_like(state_grid)*0.#np.interp(state_grid, obs[:,0], lai)
+    for p, v in the_state.default_values.iteritems():
+        x_dict[p] = np.random.rand(len(state_grid))#np.ones_like ( state_grid )*v
+    ##x_dict['omega_vis'] = np.ones_like ( state_grid )*the_state.default_values['omega_vis']
+    ##x_dict['d_vis'] = np.exp(-1.*np.ones_like ( state_grid))
+    ##x_dict['a_vis'] = np.ones_like ( state_grid)*0.1
+    ##x_dict['omega_nir'] = np.ones_like ( state_grid )*0.1
+    ##x_dict['d_nir'] = np.exp(-2.*np.ones_like ( state_grid))
+    ##x_dict['a_nir'] = np.ones_like ( state_grid)*0.18
+    ##x_dict['lai'] = np.ones_like(state_grid)*0.#np.interp(state_grid, obs[:,0], lai)
     the_state.add_operator("Obs", obsop)
+    smoother = eoldas_ng.TemporalSmoother (state_grid, 
+                        np.array([7e2, 1e3, 1e3, 7e2, 1e3, 1e3, 1e3]), 
+                        required_params= ['omega_vis', 'd_vis', 'a_vis',
+                                              'omega_nir', 'd_nir', 'a_nir', 'lai'])
+    the_state.add_operator ( "Smooth", smoother)
     prior = the_prior(the_state)
     the_state.add_operator ("Prior", prior )
     retval = the_state.optimize(x_dict, do_unc=True)
