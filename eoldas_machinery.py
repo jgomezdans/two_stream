@@ -5,6 +5,7 @@ Functions and stuff that run eoldas inversions using the TIP.
 import cPickle
 from collections import OrderedDict
 import numpy as np
+import matplotlib.pyplot as plt
 
 import eoldas_ng
 from tip_helpers import StandardStateTIP, ObservationOperatorTIP
@@ -50,28 +51,28 @@ def retrieve_albedo ( year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"  ):
     mask = np.c_[ doys, doys.astype(np.int)*0 + 1 ]
     bu = observations*0.0
     for i in xrange(2):
-        bu[full_inversions, i] = np.min ( np.c_[
+        bu[full_inversions, i] = np.max ( np.c_[
             np.ones_like (doys[full_inversions])*2.5e-3, 
             observations[full_inversions,i]*albedo_unc[0]], axis=1)
-        bu[backup_inversions, i] = np.min ( np.c_[
+        bu[backup_inversions, i] = np.max ( np.c_[
             np.ones_like (doys[backup_inversions])*2.5e-3, 
             observations[backup_inversions,i]*albedo_unc[1]], axis=1)
     passer_snow = passer.copy()
     passer_snow[passer] = is_snow[passer]
-
     # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
     # Min of 2.5e-3
+    #bu = bu*0. + 0.0025
     return observations, mask, bu, passer_snow
 
 
 def tip_inversion ( year, fluxnet_site,  
         albedo_unc=[0.05, 0.07], prior_type="TIP_standard",
-        vis_emu_pkl="tip_vis_albedo_transformed.pkl",
-        nir_emu_pkl="tip_nir_albedo_transformed.pkl",
+        vis_emu_pkl="tip_vis_emulator_real.pkl",
+        nir_emu_pkl="tip_nir_emulator_real.pkl",
         n_tries=15 ):
 
     # Start by setting up the state 
-    the_state = StandardStateTIP ( state_config, state_grid, verbose=True,
+    the_state = StandardStateTIP ( state_config, state_grid, 
                                   optimisation_options=optimisation_options)
 
     # Load and prepare the emulators for the TIP
@@ -86,21 +87,27 @@ def tip_inversion ( year, fluxnet_site,
     the_state.add_operator("Obs", obsop)
     # Set up the prior
     #prior = the_prior(the_state, prior_type )
-    prior = bernards_prior ( passer_snow, use_soil_corr=False  )
+    prior = bernards_prior ( passer_snow, use_soil_corr=True, green_leaves=False  )
     the_state.add_operator ("Prior", prior )
     # Now, we will do the function minimisation with `n_tries` different starting
     # points. We choose the one with the lowest cost...
     x_dict = OrderedDict()
     results = []
     for i in xrange(n_tries):
-        for p, v in the_state.default_values.iteritems():
-            x_dict[p] = np.random.rand(len(state_grid))
+        if i == 0:
+            for p, v in the_state.default_values.iteritems():
+                x_dict[p] = np.ones(len(state_grid))*v
+        else:    
+            for p, v in the_state.default_values.iteritems():
+                x_dict[p] = np.random.rand(len(state_grid))
 
         retval = the_state.optimize(x_dict, do_unc=True)
         results.append ( ( the_state.cost_history['global'][-1],
                          retval ) )
     best_solution = np.array([ x[0] for x in results]).argmin()
-    return results[best_solution][1]
+    print [ x[0] for x in results]
+    print "Chosen cost: %g" % results[best_solution][0]
+    return results[best_solution][1], the_state, obsop
 
 
 
@@ -143,4 +150,24 @@ def regularised_tip_inversion ( year, fluxnet_site, regularisation,
     retval = the_state.optimize(x_dict, do_unc=True)
 
 if __name__ == "__main__":
-    retval = tip_inversion ( 2010, "US-Bo1")
+    retval, state, obs = tip_inversion ( 2005, "US-Bo1")
+    plt.close()
+    params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
+    for i,p in enumerate ( params ):
+        plt.subplot(4,2, i+1 )
+        plt.fill_between ( state.state_grid, retval['real_ci5pc'][p], 
+                          retval['real_ci95pc'][p], color="0.8" )
+        plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
+                          retval['real_ci75pc'][p], color="0.6" )
+
+        plt.plot ( state.state_grid, retval['real_map'][p] )
+        plt.ylim(0,6)
+    plt.subplot(4,2,8)
+    fwd = np.array(obs.fwd_modelled_obs)  
+    plt.plot ( obs.observations[:,0], fwd[:,0], 'k+')
+    plt.plot ( obs.observations[:,1], fwd[:,1], 'rx')
+    plt.plot([0,0.7], [0, 0.7], 'k--')
+    plt.plot([2.5e-3, 0.7+0.7*0.07],[2.5e-3, 0.7+0.7*0.07], 'k--', lw=0.5)
+    plt.plot([-2.5e-3, 0.7-0.7*0.07],[-2.5e-3, 0.7-0.7*0.07], 'k--', lw=0.5)
+
+    plt.show()

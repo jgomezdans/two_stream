@@ -95,7 +95,7 @@ class StandardStateTIP ( State ):
         self.parameter_min = OrderedDict()
         self.parameter_max = OrderedDict()
         min_vals = [ 0.001, 0.001, 0.001, 0.001, 0.001, 0.001,0.01 ]
-        max_vals = [ 0.99, 4., 0.99, 0.99, 4., 0.99, 6 ]
+        max_vals = [ 0.99, 5., 0.99, 0.99, 5., 0.99, 6 ]
 
         for i, param in enumerate ( state_config.keys() ):
             self.parameter_min[param] = min_vals[i]
@@ -107,14 +107,14 @@ class StandardStateTIP ( State ):
             self.bounds.append ( [ self.parameter_min[param]*0.9, \
                 self.parameter_max[param]*1.1 ] )
             # Define parameter transformations
-        transformations = {
-                'lai': lambda x: np.exp ( -3.*x/2. ), 
-                'd_nir': lambda x: np.exp ( -x ), 
-                'd_vis': lambda x: np.exp ( -x ) }
-        inv_transformations = {
-                'lai': lambda x: -1.5*np.log ( x ), 
-                'd_nir': lambda x: -np.log ( x ), 
-                'd_vis': lambda x: -np.log( x ) }
+        transformations = {}
+                #'lai': lambda x: np.exp ( -3.*x/2. ), 
+                #'d_nir': lambda x: np.exp ( -x ), 
+                #'d_vis': lambda x: np.exp ( -x ) }
+        inv_transformations = {}
+                #'lai': lambda x: -1.5*np.log ( x ), 
+                #'d_nir': lambda x: -np.log ( x ), 
+                #'d_vis': lambda x: -np.log( x ) }
         
         
         self.set_transformations ( transformations, inv_transformations )
@@ -331,7 +331,7 @@ class ObservationOperatorTIP ( object ):
         return cost.sum(), der_cost, fwd, gradient
     
     
-    def der_der_cost ( self, x_dict, state_config, state, epsilon=1.0e-5 ):
+    def der_der_cost ( self, x_dict, state_config, state, epsilon=1.0e-2 ):
         """Numerical approximation to the Hessian. This approximation is quite
         simple, and is based on a finite differences of the individual terms of 
         the cost function. Note that this method shares a lot with the `der_cost`
@@ -449,7 +449,7 @@ class ObservationOperatorTIP ( object ):
         return sp.lil_matrix ( h.T )
         
 
-def bernards_prior ( snow_qa, unc_multiplier=1., 
+def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True, 
                     use_soil_corr=True, N=46 ):
     """The "official" JRC prior, with a couple of options. The prior takes
     only the presence of snow flag as a required input, and returns an eoldas
@@ -461,43 +461,53 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,
 #### PRIOR UNITS FOR TRANSFORMED VARIABLES
 ################################################################
     prior_mean = OrderedDict ()
-    prior_mean['omega_vis'] = 0.17
-    prior_mean['d_vis'] = np.exp(-1.) # original coords is 1
+    prior_mean['omega_vis'] = 0.13
+    prior_mean['d_vis'] = 1 # original coords is 1
     prior_mean['a_vis'] = .1
-    prior_mean['omega_nir'] = 0.7
-    prior_mean['d_nir'] = np.exp(-2 )
+    prior_mean['omega_nir'] = 0.77
+    prior_mean['d_nir'] = 2
     prior_mean['a_nir'] = 0.18 
-    prior_mean['lai'] = np.exp(-3.)
-
+    prior_mean['lai'] = 1.5
+    
     prior_mean_snow = OrderedDict ()
-    prior_mean_snow['omega_vis'] = 0.17
-    prior_mean_snow['d_vis'] = np.exp(-1.)#0.18 # original units is 1
+    prior_mean_snow['omega_vis'] = 0.13
+    prior_mean_snow['d_vis'] = 1#0.18 # original units is 1
     prior_mean_snow['a_vis'] = 0.50
-    prior_mean_snow['omega_nir'] = 0.7
-    prior_mean_snow['d_nir'] = np.exp(-2.) 
-    prior_mean_snow['a_nir'] = 0.350 
-    prior_mean_snow['lai'] = np.exp(-3.)
+    prior_mean_snow['omega_nir'] = 0.77
+    prior_mean_snow['d_nir'] = 2 
+    prior_mean_snow['a_nir'] = 0.350
+    prior_mean_snow['lai'] = 1.5
 
 
     prior_inv_cov= OrderedDict ()
-    prior_inv_cov['omega_vis'] = np.array ( [.1])*unc_multiplier
+    prior_inv_cov['omega_vis'] = np.array ( [.0140])*unc_multiplier
     prior_inv_cov['d_vis'] = np.array ( [0.7])*unc_multiplier # original 0.7
-    prior_inv_cov['a_vis'] = np.array ( [0.959])*unc_multiplier
-    prior_inv_cov['omega_nir'] = np.array ([0.08] )*unc_multiplier
+    prior_inv_cov['a_vis'] = np.array ( [0.0959])*unc_multiplier
+    prior_inv_cov['omega_nir'] = np.array ([0.0140] )*unc_multiplier
     prior_inv_cov['d_nir'] = np.array ([1.5] )*unc_multiplier # original 1.5
     prior_inv_cov['a_nir'] = np.array ([.2] )*unc_multiplier
     prior_inv_cov['lai'] = np.array ([5] )*unc_multiplier # original 5
 
 
     prior_inv_cov_snow= OrderedDict ()
-    prior_inv_cov_snow['omega_vis'] = np.array ( [.1])*unc_multiplier
+    prior_inv_cov_snow['omega_vis'] = np.array ( [.0140])*unc_multiplier
     prior_inv_cov_snow['d_vis'] = np.array ( [0.7])*unc_multiplier
     prior_inv_cov_snow['a_vis'] = np.array ( [0.346])*unc_multiplier
-    prior_inv_cov_snow['omega_nir'] = np.array ([0.08] )*unc_multiplier
+    prior_inv_cov_snow['omega_nir'] = np.array ([0.0140] )*unc_multiplier
     prior_inv_cov_snow['d_nir'] = np.array ([1.5] )*unc_multiplier
     prior_inv_cov_snow['a_nir'] = np.array ([.25] )*unc_multiplier
-    prior_inv_cov_snow['lai'] = np.array ([1] )*unc_multiplier
+    prior_inv_cov_snow['lai'] = np.array ([5] )*unc_multiplier
 
+    if not green_leaves:
+        prior_mean['omega_nir'] = 0.7
+        prior_mean['omega_vis'] = 0.17
+        prior_mean_snow['omega_vis'] = 0.17
+        prior_mean_snow['omega_nir'] = 0.7
+        prior_inv_cov['omega_vis'] = 0.12
+        prior_inv_cov['omega_nir'] = 0.15
+        prior_inv_cov_snow['omega_vis'] = 0.12
+        prior_inv_cov_snow['omega_nir'] = 0.15
+        
     soil_cov=0.8862*np.sqrt ( prior_inv_cov['a_vis'] * 
                               prior_inv_cov['a_nir'] )
     snow_cov=0.8670*np.sqrt (prior_inv_cov_snow['a_vis'] * 
@@ -505,14 +515,13 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,
 
     mu_prior = np.zeros(7*N) # 7 parameters, N time steps
     main_diag = np.zeros(7*N) # 7 parameters, N time steps
-    off_diag  = np.zeros(7*N) # 7 parameters, N time steps
     for i, parameter in enumerate(prior_mean.iterkeys()):
         xx = np.where ( snow_qa, prior_mean_snow[parameter],
                                     prior_mean[parameter] )
         mu_prior[i*N:((i+1)*N)] = xx
         xx = np.where ( snow_qa, prior_inv_cov_snow[parameter],
                         prior_inv_cov[parameter])
-        main_diag[i*N:((i+1)*N)] = xx
+        main_diag[i*N:((i+1)*N)] = xx**2
     C = np.diag( main_diag )
     if use_soil_corr:
         for i in xrange(N):
