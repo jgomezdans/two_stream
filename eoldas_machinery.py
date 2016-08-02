@@ -161,7 +161,10 @@ if __name__ == "__main__":
                           retval['real_ci75pc'][p], color="0.6" )
 
         plt.plot ( state.state_grid, retval['real_map'][p] )
-        plt.ylim(0,6)
+        if p in ["d_vis", "d_nir", "lai"]:
+            plt.ylim(0,6)
+        else:
+            plt.ylim(0,1)
     plt.subplot(4,2,8)
     fwd = np.array(obs.fwd_modelled_obs)  
     plt.plot ( obs.observations[:,0], fwd[:,0], 'k+')
