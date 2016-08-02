@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+__author__  = "J Gomez-Dans"
+__version__ = "1.0 (01.08.2016)"
+__email__   = "j.gomez-dans@ucl.ac.uk"
+
 import numpy as np
 import scipy.sparse as sp
 import matplotlib.pyplot as plt
@@ -6,39 +11,6 @@ import matplotlib.pyplot as plt
 
 import eoldas_ng 
 
-#!/usr/bin/env python
-"""
-eoldas_ng helper functions/classes
-=======================================
-
-Here we provide  a set of helper functions/classes that provide some often
-required functionality. None of this is *actually* required to run the system,
-but it should make the library more user friendly.
-
-``StandardStatePROSAIL`` and ``StandardStateSEMIDISCRETE``
-------------------------------------------------------------
-
-Potentially, there will be other classes like these two. These two classes
-simplify the usage of two standard RT models in defining the state. This means
-that they'll provide parameter boundaries and standard transformations.
-
-``CrossValidation``
----------------------
-
-A simple cross-validation framework for models that have a ``gamma`` term. Done
-by 
-
-``SequentialVariational``
----------------------------
-
-The world-famous sequential variational approach to big state space assimilation.
-
-
-"""
-
-__author__  = "J Gomez-Dans"
-__version__ = "1.0 (29.12.2014)"
-__email__   = "j.gomez-dans@ucl.ac.uk"
 
 import platform
 import numpy as np
@@ -477,10 +449,89 @@ class ObservationOperatorTIP ( object ):
         return sp.lil_matrix ( h.T )
         
 
+def bernards_prior ( snow_qa, unc_multiplier=1., 
+                    use_soil_corr=True, N=46 ):
+    """The "official" JRC prior, with a couple of options. The prior takes
+    only the presence of snow flag as a required input, and returns an eoldas
+    Prior object already configured. The other options can be used to change
+    the prior uncertainty, to swich on and off the soil/snow correlation terms,
+    or to change the size of the state grid.
+    """
+################################################################
+#### PRIOR UNITS FOR TRANSFORMED VARIABLES
+################################################################
+    prior_mean = OrderedDict ()
+    prior_mean['omega_vis'] = 0.17
+    prior_mean['d_vis'] = np.exp(-1.) # original coords is 1
+    prior_mean['a_vis'] = .1
+    prior_mean['omega_nir'] = 0.7
+    prior_mean['d_nir'] = np.exp(-2 )
+    prior_mean['a_nir'] = 0.18 
+    prior_mean['lai'] = np.exp(-3.)
 
-def the_prior ( state ):
+    prior_mean_snow = OrderedDict ()
+    prior_mean_snow['omega_vis'] = 0.17
+    prior_mean_snow['d_vis'] = np.exp(-1.)#0.18 # original units is 1
+    prior_mean_snow['a_vis'] = 0.50
+    prior_mean_snow['omega_nir'] = 0.7
+    prior_mean_snow['d_nir'] = np.exp(-2.) 
+    prior_mean_snow['a_nir'] = 0.350 
+    prior_mean_snow['lai'] = np.exp(-3.)
+
+
+    prior_inv_cov= OrderedDict ()
+    prior_inv_cov['omega_vis'] = np.array ( [.1])*unc_multiplier
+    prior_inv_cov['d_vis'] = np.array ( [0.7])*unc_multiplier # original 0.7
+    prior_inv_cov['a_vis'] = np.array ( [0.959])*unc_multiplier
+    prior_inv_cov['omega_nir'] = np.array ([0.08] )*unc_multiplier
+    prior_inv_cov['d_nir'] = np.array ([1.5] )*unc_multiplier # original 1.5
+    prior_inv_cov['a_nir'] = np.array ([.2] )*unc_multiplier
+    prior_inv_cov['lai'] = np.array ([5] )*unc_multiplier # original 5
+
+
+    prior_inv_cov_snow= OrderedDict ()
+    prior_inv_cov_snow['omega_vis'] = np.array ( [.1])*unc_multiplier
+    prior_inv_cov_snow['d_vis'] = np.array ( [0.7])*unc_multiplier
+    prior_inv_cov_snow['a_vis'] = np.array ( [0.346])*unc_multiplier
+    prior_inv_cov_snow['omega_nir'] = np.array ([0.08] )*unc_multiplier
+    prior_inv_cov_snow['d_nir'] = np.array ([1.5] )*unc_multiplier
+    prior_inv_cov_snow['a_nir'] = np.array ([.25] )*unc_multiplier
+    prior_inv_cov_snow['lai'] = np.array ([1] )*unc_multiplier
+
+    soil_cov=0.8862*np.sqrt ( prior_inv_cov['a_vis'] * 
+                              prior_inv_cov['a_nir'] )
+    snow_cov=0.8670*np.sqrt (prior_inv_cov_snow['a_vis'] * 
+                             prior_inv_cov_snow['a_nir'] )
+
+    mu_prior = np.zeros(7*N) # 7 parameters, N time steps
+    main_diag = np.zeros(7*N) # 7 parameters, N time steps
+    off_diag  = np.zeros(7*N) # 7 parameters, N time steps
+    for i, parameter in enumerate(prior_mean.iterkeys()):
+        xx = np.where ( snow_qa, prior_mean_snow[parameter],
+                                    prior_mean[parameter] )
+        mu_prior[i*N:((i+1)*N)] = xx
+        xx = np.where ( snow_qa, prior_inv_cov_snow[parameter],
+                        prior_inv_cov[parameter])
+        main_diag[i*N:((i+1)*N)] = xx
+    C = np.diag( main_diag )
+    if use_soil_corr:
+        for i in xrange(N):
+            if snow_qa[i]:
+                C[2*N + i, 5*N + i] = snow_cov
+                C[5*N + i, 2*N + i] = snow_cov
+            else:
+                C[2*N + i, 5*N + i] = soil_cov
+                C[5*N + i, 2*N + i] = soil_cov
+            
+    Cinv = np.linalg.inv( C )
+    Cinv = sp.lil_matrix ( Cinv )
+    prior = eoldas_ng.Prior ( mu_prior, Cinv )
+    return prior
+
+def the_prior ( state, prior_type="TIP_standard" ):
     mu_prior = OrderedDict ()
     prior_inv_cov= OrderedDict ()
+    
     prior_inv_cov['omega_vis'] = np.array ( [.1])
     prior_inv_cov['d_vis'] = np.array ( [0.7])
     prior_inv_cov['a_vis'] = np.array ( [0.959])
@@ -488,6 +539,10 @@ def the_prior ( state ):
     prior_inv_cov['d_nir'] = np.array ([1.5] )
     prior_inv_cov['a_nir'] = np.array ([.2] )
     prior_inv_cov['lai'] = np.array ([5] )
+    
+    if prior_type == "TIP_uninformative":
+        for k in prior_inv_cov.iterkeys():
+            prior_inv_cov[k] = prior_inv_cov[k]*2.
     
 
     for param in state.parameter_min.iterkeys():
@@ -499,7 +554,7 @@ def the_prior ( state ):
             prior_inv_cov[param] = 1./prior_inv_cov[param]**2
             
     print "====>>> NO SOIL COVARIANCE TERM YET <<<====="
-    prior = Prior ( mu_prior, prior_inv_cov )
+    prior = eoldas_ng.Prior ( mu_prior, prior_inv_cov )
     return prior
 
 if __name__ == "__main__":
@@ -562,13 +617,7 @@ if __name__ == "__main__":
     x_dict = OrderedDict()
     for p, v in the_state.default_values.iteritems():
         x_dict[p] = np.random.rand(len(state_grid))#np.ones_like ( state_grid )*v
-    ##x_dict['omega_vis'] = np.ones_like ( state_grid )*the_state.default_values['omega_vis']
-    ##x_dict['d_vis'] = np.exp(-1.*np.ones_like ( state_grid))
-    ##x_dict['a_vis'] = np.ones_like ( state_grid)*0.1
-    ##x_dict['omega_nir'] = np.ones_like ( state_grid )*0.1
-    ##x_dict['d_nir'] = np.exp(-2.*np.ones_like ( state_grid))
-    ##x_dict['a_nir'] = np.ones_like ( state_grid)*0.18
-    ##x_dict['lai'] = np.ones_like(state_grid)*0.#np.interp(state_grid, obs[:,0], lai)
+
     the_state.add_operator("Obs", obsop)
     smoother = eoldas_ng.TemporalSmoother (state_grid, 
                         np.array([7e2, 1e3, 1e3, 7e2, 1e3, 1e3, 1e3]), 
