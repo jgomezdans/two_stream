@@ -508,9 +508,9 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
         prior_inv_cov_snow['omega_vis'] = 0.12
         prior_inv_cov_snow['omega_nir'] = 0.15
         
-    soil_cov=0.8862*np.sqrt ( prior_inv_cov['a_vis'] * 
+    soil_cov=0.8862* ( prior_inv_cov['a_vis'] * 
                               prior_inv_cov['a_nir'] )
-    snow_cov=0.8670*np.sqrt (prior_inv_cov_snow['a_vis'] * 
+    snow_cov=0.8670* (prior_inv_cov_snow['a_vis'] * 
                              prior_inv_cov_snow['a_nir'] )
 
     mu_prior = np.zeros(7*N) # 7 parameters, N time steps
