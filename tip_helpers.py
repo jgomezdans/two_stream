@@ -521,6 +521,8 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
         mu_prior[i*N:((i+1)*N)] = xx
         xx = np.where ( snow_qa, prior_inv_cov_snow[parameter],
                         prior_inv_cov[parameter])
+        
+        # This needs to be squared for the main diagonal, as variances go there right?
         main_diag[i*N:((i+1)*N)] = xx**2
     C = np.diag( main_diag )
     if use_soil_corr:

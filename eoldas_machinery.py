@@ -61,7 +61,7 @@ def retrieve_albedo ( year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"  ):
     passer_snow[passer] = is_snow[passer]
     # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
     # Min of 2.5e-3
-    #bu = bu*0. + 0.0025
+    #bu = bu*0. + 0.005
     return observations, mask, bu, passer_snow
 
 
