@@ -6,9 +6,15 @@ __author__  = "J Gomez-Dans"
 __version__ = "1.0 (01.08.2016)"
 __email__   = "j.gomez-dans@ucl.ac.uk"
 
+import numpy as np
+from collections import OrderedDict
 import eoldas_ng
 import scipy.sparse as sp
 from eoldas_ng import State
+
+import time
+from eoldas_ng import State, MetaState, CONSTANT, VARIABLE, FIXED
+
 
 
 def get_problem_size ( x_dict, state_config, state_grid=None ):
