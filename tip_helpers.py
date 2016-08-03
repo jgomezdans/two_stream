@@ -105,8 +105,8 @@ class StandardStateTIP ( State ):
         self.verbose = verbose
         self.bounds = []
         for ( i, param ) in enumerate ( self.state_config.iterkeys() ):
-            self.bounds.append ( [ self.parameter_min[param]*0.9, \
-                self.parameter_max[param]*1.1 ] )
+            self.bounds.append ( [ self.parameter_min[param],
+                                   self.parameter_max[param]] )
             # Define parameter transformations
         transformations = {}
                 #'lai': lambda x: np.exp ( -3.*x/2. ), 
@@ -216,7 +216,7 @@ class ObservationOperatorTIP ( object ):
             j += 1
         self.fwd_modelled_obs = []
         istart_doy = self.state_grid[0] - 1
-        
+
         # At this point, we have an array of parameters. Some will need to be
         # ferried over to the VIS GP, and the others to the NIR GP
         # 
@@ -230,14 +230,14 @@ class ObservationOperatorTIP ( object ):
                             x_params[[3,4,5,6], :].T, do_unc=False )
         for itime, tstep in enumerate ( self.state_grid[1:] ):
             # Select all observations between istart_doy and tstep
-            sel_obs = np.where ( np.logical_and ( self.mask[:, 0] > istart_doy, \
+            sel_obs = np.where ( np.logical_and ( self.mask[:, 0] > istart_doy,
                 self.mask[:, 0] <= tstep ), True, False )
             if sel_obs.sum() == 0:
                 # We have no observations, go to next period!
                 istart_doy = tstep # Update istart_doy
                 continue
             # Now, test the QA flag, field 2 of the mask...
-            sel_obs = np.where ( np.logical_and ( self.mask[:, 1], sel_obs ), \
+            sel_obs = np.where ( np.logical_and ( self.mask[:, 1], sel_obs ),
                 True, False )
             if sel_obs.sum() == 0:
                 # We have no observations, go to next period!
@@ -272,7 +272,7 @@ class ObservationOperatorTIP ( object ):
         """Returns relevant information on the observations for a particular time step.
         """
         this_obs = self.observations[ this_loc, :]
-        bu = self.bu
+        bu = self.bu[this_loc]
         return this_obs, bu
     
     def time_step2 ( self, this_loc ):
@@ -296,16 +296,17 @@ class ObservationOperatorTIP ( object ):
         dfwd_albedo_vis = dfwd_albedo_vis.squeeze()
         dfwd_albedo_nir = dfwd_albedo_nir.squeeze()
         # first vis...
-        fwd = [fwd_albedo_vis, fwd_albedo_nir]
         d = fwd_albedo_vis - obs[0]
         gradient[vis_posns] = dfwd_albedo_vis 
-        derivs[vis_posns] = d*dfwd_albedo_vis/(bu[vis_posns, 0]**2)
-        cost += 0.5*d*d/(bu[vis_posns,0]**2)
+        derivs[vis_posns] = d*dfwd_albedo_vis/(bu[0]**2)
+        cost += 0.5*d*d/(bu[0]**2)
+
+        # Now NIR
         d = fwd_albedo_nir - obs[1]
         gradient[nir_posns] = dfwd_albedo_nir 
         
-        derivs[nir_posns] += d*dfwd_albedo_nir/(bu[nir_posns, 1]**2)
-        cost += 0.5*d*d/(bu[nir_posns, 1]**2)
+        derivs[nir_posns] += d*dfwd_albedo_nir/(bu[1]**2)
+        cost += 0.5*d*d/(bu[1]**2)
         der_cost = derivs # I *think*
         # der_cost 
 
@@ -324,19 +325,24 @@ class ObservationOperatorTIP ( object ):
         derivs = np.zeros(7)
         vis_posns = np.array ( [0,1,2,6 ])
         nir_posns = np.array ( [3,4,5,6 ] )
-        fwd = [self.fwd_albedo_vis[itime], self.fwd_albedo_nir[itime] ]
+
+
+        # First visible
+
         d = self.fwd_albedo_vis[itime] - obs[0]
         gradient[vis_posns] = self.dfwd_albedo_vis[itime] 
-        derivs[vis_posns] = d*self.dfwd_albedo_vis[itime]/(bu[vis_posns, 0]**2)
-        cost += 0.5*d*d/(bu[vis_posns, 0]**2)
+        derivs[vis_posns] = d*self.dfwd_albedo_vis[itime]/(bu[0]**2)
+        cost += 0.5*d*d/(bu[0]**2)
+
+        # Then NIR
+
         d = self.fwd_albedo_nir[itime] - obs[1]
-        gradient[nir_posns] = self.dfwd_albedo_nir[itime] 
-        
-        derivs[nir_posns] += d*self.dfwd_albedo_nir[itime]/(bu[nir_posns, 1]**2)
-        cost += 0.5*d*d/(bu[nir_posns, 1]**2)
+        gradient[nir_posns] = self.dfwd_albedo_nir[itime]
+        derivs[nir_posns] += d*self.dfwd_albedo_nir[itime]/(bu[1]**2)
+        cost += 0.5*d*d/(bu[1]**2)
         der_cost = derivs # I *think*
         # der_cost 
-
+        fwd = [self.fwd_albedo_vis[itime], self.fwd_albedo_nir[itime]]
         return cost.sum(), der_cost, fwd, gradient
     
     
@@ -477,9 +483,9 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
     prior_mean['d_vis'] = 1 # original coords is 1
     prior_mean['a_vis'] = .1
     prior_mean['omega_nir'] = 0.77
-    prior_mean['d_nir'] = 2
+    prior_mean['d_nir'] = 2.
     prior_mean['a_nir'] = 0.18 
-    prior_mean['lai'] = 1.5
+    prior_mean['lai'] = 2.
 
     ##########################################################################
     # Prior means for SNOW case                                              #
@@ -492,7 +498,7 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
     prior_mean_snow['omega_nir'] = 0.77
     prior_mean_snow['d_nir'] = 2 
     prior_mean_snow['a_nir'] = 0.350
-    prior_mean_snow['lai'] = 1.5
+    prior_mean_snow['lai'] = 2.
     ##########################################################################
     # Prior standard deviation  for NO SNOW case                             #
     ##########################################################################
@@ -537,7 +543,6 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
         mu_prior[i*N:((i+1)*N)] = xx
         xx = np.where (snow_qa, prior_inv_cov_snow[parameter],
                         prior_inv_cov[parameter])
-        
         # This needs to be squared for the main diagonal, as variances go there right?
         main_diag[i*N:((i+1)*N)] = xx**2
     C = np.diag( main_diag )

@@ -8,14 +8,15 @@ from collections import OrderedDict
 import eoldas_ng
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import UnivariateSpline
 
 from get_albedo import Observations
 from tip_helpers import StandardStateTIP, ObservationOperatorTIP
 from tip_helpers import bernards_prior
 
 # Define some useful globals
-optimisation_options = {'ftol': 1./10000, 'gtol':1e-12, 
-                            'maxcor':300, 'maxiter':1500 }
+optimisation_options = {'gtol':1e-12,
+                            'maxcor':600, 'maxiter':1500, "disp":20}
 state_grid = np.arange(1, 366, 8)
 
 state_config = OrderedDict()
@@ -68,7 +69,7 @@ def retrieve_albedo ( year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"  ):
 def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
                     vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=15):
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
     these are present in the database!)
@@ -111,10 +112,18 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     the_state.add_operator("Obs", obsop)
     # Set up the prior
     ### prior = the_prior(the_state, prior_type )
-    prior = bernards_prior ( passer_snow, use_soil_corr=True, green_leaves=green_leaves)
+    prior = bernards_prior ( passer_snow, use_soil_corr=True,
+                             green_leaves=green_leaves)
     the_state.add_operator ("Prior", prior )
     # Now, we will do the function minimisation with `n_tries` different starting
     # points. We choose the one with the lowest cost...
+
+    ndvi = (obsop.observations[:,1] - obsop.observations[:,0])/\
+           (obsop.observations[:,1] + obsop.observations[:,0])
+    lai_init =  0.26*np.power(26.28, ndvi)*2.5
+    xp = mask[:,0]
+    spl = UnivariateSpline ( xp, 2.*lai_init )
+    lai_init = spl( state_grid )
     x_dict = OrderedDict()
     results = []
     for i in xrange(n_tries):
@@ -124,7 +133,7 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
         else:    
             for p, v in the_state.default_values.iteritems():
                 x_dict[p] = np.random.rand(len(state_grid))
-
+            x_dict['lai'] = lai_init
         retval = the_state.optimize(x_dict, do_unc=True)
         results.append ( ( the_state.cost_history['global'][-1],
                          retval ) )
@@ -175,12 +184,14 @@ def regularised_tip_inversion ( year, fluxnet_site, regularisation,
 
 if __name__ == "__main__":
     params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-    for year in [2005, 2006, 2007, 2008, 2009, 2010]:
-        retval, state, obs = tip_inversion ( year, "DE-Hai", green_leaves=False)
-        plt.figure()
+    site = "DE-Hai"
+    for year in [2008, 2009, 2010]:
+        retval, state, obs = tip_inversion ( year, site, green_leaves=False)
+        fig = plt.figure()
+        fig.suptitle("%s (%d)" % (site, year))
 
         for i,p in enumerate ( params ):
-            plt.subplot(4,2, i+1 )
+            plt.subplot(5,2, i+1 )
             plt.fill_between ( state.state_grid, retval['real_ci5pc'][p],
                               retval['real_ci95pc'][p], color="0.8" )
             plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
@@ -191,13 +202,22 @@ if __name__ == "__main__":
                 plt.ylim(0,6)
             else:
                 plt.ylim(0,1)
-        plt.subplot(4,2,8)
+        plt.subplot(5,2,8)
         fwd = np.array(obs.fwd_modelled_obs)
         plt.plot ( obs.observations[:,0], fwd[:,0], 'k+')
         plt.plot ( obs.observations[:,1], fwd[:,1], 'rx')
         plt.plot([0,0.7], [0, 0.7], 'k--')
         plt.plot([2.5e-3, 0.7+0.7*0.07],[2.5e-3, 0.7+0.7*0.07], 'k--', lw=0.5)
         plt.plot([-2.5e-3, 0.7-0.7*0.07],[-2.5e-3, 0.7-0.7*0.07], 'k--', lw=0.5)
-        plt.title ("DE-Hai (%d)" % year )
+        plt.subplot(5,2,9)
+        plt.vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
+                   obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
+        plt.plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
+        plt.subplot(5,2,10)
+        plt.vlines(obs.mask[:, 0], obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
+                   obs.observations[:, 1] + 1.96 * obs.bu[:, 1])
+        plt.plot ( obs.mask[:,0], obs.observations[:,1], 'o')
+
+
 
     plt.show()
