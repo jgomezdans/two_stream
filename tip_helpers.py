@@ -215,7 +215,7 @@ class ObservationOperatorTIP ( object ):
                 x_params[ j, : ] = x_dict[param]
             j += 1
         self.fwd_modelled_obs = []
-        istart_doy = self.state_grid[0]
+        istart_doy = self.state_grid[0] - 1
         
         # At this point, we have an array of parameters. Some will need to be
         # ferried over to the VIS GP, and the others to the NIR GP
@@ -401,7 +401,7 @@ class ObservationOperatorTIP ( object ):
         n_const = np.sum ( param_pattern == CONSTANT )
         n_var = np.sum ( param_pattern == VARIABLE )
         n_grid = self.nt # don't ask...
-        istart_doy = self.state_grid[0]
+        istart_doy = self.state_grid[0] - 1
         for itime, tstep in enumerate ( self.state_grid[1:] ):
             # Select all observations between istart_doy and tstep
             sel_obs = np.where ( np.logical_and ( self.mask[:, 0] > istart_doy, \
