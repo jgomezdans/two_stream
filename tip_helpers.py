@@ -1,23 +1,14 @@
 #!/usr/bin/env python
-
+"""
+Some helper classes and methods to use the eoldas_ng engine on the JRC-TIP inversions
+"""
 __author__  = "J Gomez-Dans"
 __version__ = "1.0 (01.08.2016)"
 __email__   = "j.gomez-dans@ucl.ac.uk"
 
-import numpy as np
+import eoldas_ng
 import scipy.sparse as sp
-import matplotlib.pyplot as plt
-
-
-import eoldas_ng 
-
-
-import platform
-import numpy as np
-import time
-
-from collections import OrderedDict
-from eoldas_ng import State, MetaState, CONSTANT, VARIABLE, FIXED
+from eoldas_ng import State
 
 
 def get_problem_size ( x_dict, state_config, state_grid=None ):
@@ -45,11 +36,15 @@ def get_problem_size ( x_dict, state_config, state_grid=None ):
     return n_params, n_elems
 
 class StandardStateTIP ( State ):
-    """A standard state configuration for the PROSAIL model"""
+    """A standard state configuration for Bernard Pinty's TwoStream model.
+    This class has some default values that are as used in the standard
+    JRC-TIP parameter inversion machinery."""
     def __init__ ( self, state_config, state_grid, \
                  optimisation_options=None, \
                  output_name=None, verbose=False ):
-        
+        """Takes state configuration, state grid, and some common optional 
+        parameters.
+        """
         self.state_config = state_config
         self.state_grid = state_grid
         self.n_elems =  self.state_grid.size
@@ -129,16 +124,26 @@ class StandardStateTIP ( State ):
         
 
 class ObservationOperatorTIP ( object ):
-    """A GP-based observation operator"""
-    def __init__ ( self, state_grid, state, observations, mask, emulators, bu, \
-            band_pass=None, bw=None ):
+    """An operator calculating the "fit to the observations" using the 
+    Pinty's Two Stream RT model. The model here is used through emulation
+    with Gaussian Processes. The layout of the code is slightly different
+    to the one we use typically because 
+    1. Each band has a different emulator,
+    2. Each band uses a subset of the parameters,
+    3. Only two emulators are required for the entire time series.
+    
+    TODO The coding could be more flexible, as we could potentially use
+    this for other ObsOps (e.g. SAR, passive microwaves, etc.)
+    """
+    def __init__ ( self, state_grid, state, observations, mask, emulators, bu ):
         """
-         observations is an array with n_bands, nt observations. nt has to be the 
-         same size as state_grid (can have dummny numbers in). mask is nt*4 
-         (mask, vza, sza, raa) array.
-         
-         
-        """
+         observations is an array with `n_observations`, `n_bands`, and in 
+         reality, `n_bands` should always be 2 (VIS & NIR). The mask just
+         has two columns, the DoY and a bunch of 1s or 0s (the former
+         indicating it's OK, the latter indicating it's a bad observation).
+         `bu` is the uncertainty, which will be in this case the same size
+         as `observations`
+         """
         self.state = state
         self.observations = observations
         try:
@@ -151,10 +156,8 @@ class ObservationOperatorTIP ( object ):
         self.nt = self.state_grid.shape[0]
         self.emulators = emulators
         self.bu = bu
-        self.band_pass = band_pass
-        self.bw = bw
 
-        plt.plot( self.mask[:,0], self.observations[:,1], 'o')
+
     
     def der_cost ( self, x_dict, state_config ):
 
@@ -449,17 +452,20 @@ class ObservationOperatorTIP ( object ):
         return sp.lil_matrix ( h.T )
         
 
-def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True, 
-                    use_soil_corr=True, N=46 ):
+def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
+                     use_soil_corr=True, N=46 ):
     """The "official" JRC prior, with a couple of options. The prior takes
     only the presence of snow flag as a required input, and returns an eoldas
     Prior object already configured. The other options can be used to change
     the prior uncertainty, to swich on and off the soil/snow correlation terms,
     or to change the size of the state grid.
+
+    The description the parameters is in the original JRC-TIP papers (Pinty
+    et al, 2011)
     """
-################################################################
-#### PRIOR UNITS FOR TRANSFORMED VARIABLES
-################################################################
+    ##########################################################################
+    # Prior means for NO SNOW case                                           #
+    ##########################################################################
     prior_mean = OrderedDict ()
     prior_mean['omega_vis'] = 0.13
     prior_mean['d_vis'] = 1 # original coords is 1
@@ -468,35 +474,41 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
     prior_mean['d_nir'] = 2
     prior_mean['a_nir'] = 0.18 
     prior_mean['lai'] = 1.5
-    
+
+    ##########################################################################
+    # Prior means for SNOW case                                              #
+    ##########################################################################
+
     prior_mean_snow = OrderedDict ()
     prior_mean_snow['omega_vis'] = 0.13
-    prior_mean_snow['d_vis'] = 1#0.18 # original units is 1
+    prior_mean_snow['d_vis'] = 1
     prior_mean_snow['a_vis'] = 0.50
     prior_mean_snow['omega_nir'] = 0.77
     prior_mean_snow['d_nir'] = 2 
     prior_mean_snow['a_nir'] = 0.350
     prior_mean_snow['lai'] = 1.5
-
-
+    ##########################################################################
+    # Prior standard deviation  for NO SNOW case                             #
+    ##########################################################################
     prior_inv_cov= OrderedDict ()
-    prior_inv_cov['omega_vis'] = np.array ( [.0140])*unc_multiplier
-    prior_inv_cov['d_vis'] = np.array ( [0.7])*unc_multiplier # original 0.7
-    prior_inv_cov['a_vis'] = np.array ( [0.0959])*unc_multiplier
+    prior_inv_cov['omega_vis'] = np.array ([.0140])*unc_multiplier
+    prior_inv_cov['d_vis'] = np.array ([0.7])*unc_multiplier # original 0.7
+    prior_inv_cov['a_vis'] = np.array ([0.0959])*unc_multiplier
     prior_inv_cov['omega_nir'] = np.array ([0.0140] )*unc_multiplier
-    prior_inv_cov['d_nir'] = np.array ([1.5] )*unc_multiplier # original 1.5
-    prior_inv_cov['a_nir'] = np.array ([.2] )*unc_multiplier
-    prior_inv_cov['lai'] = np.array ([5] )*unc_multiplier # original 5
-
-
+    prior_inv_cov['d_nir'] = np.array ([1.5])*unc_multiplier # original 1.5
+    prior_inv_cov['a_nir'] = np.array ([.2])*unc_multiplier
+    prior_inv_cov['lai'] = np.array ([5])*unc_multiplier # original 5
+    ##########################################################################
+    # Prior standard deviation  for SNOW case                             #
+    ##########################################################################
     prior_inv_cov_snow= OrderedDict ()
-    prior_inv_cov_snow['omega_vis'] = np.array ( [.0140])*unc_multiplier
-    prior_inv_cov_snow['d_vis'] = np.array ( [0.7])*unc_multiplier
-    prior_inv_cov_snow['a_vis'] = np.array ( [0.346])*unc_multiplier
-    prior_inv_cov_snow['omega_nir'] = np.array ([0.0140] )*unc_multiplier
-    prior_inv_cov_snow['d_nir'] = np.array ([1.5] )*unc_multiplier
-    prior_inv_cov_snow['a_nir'] = np.array ([.25] )*unc_multiplier
-    prior_inv_cov_snow['lai'] = np.array ([5] )*unc_multiplier
+    prior_inv_cov_snow['omega_vis'] = np.array ([.0140])*unc_multiplier
+    prior_inv_cov_snow['d_vis'] = np.array ([0.7])*unc_multiplier
+    prior_inv_cov_snow['a_vis'] = np.array ([0.346])*unc_multiplier
+    prior_inv_cov_snow['omega_nir'] = np.array ([0.0140])*unc_multiplier
+    prior_inv_cov_snow['d_nir'] = np.array ([1.5])*unc_multiplier
+    prior_inv_cov_snow['a_nir'] = np.array ([.25])*unc_multiplier
+    prior_inv_cov_snow['lai'] = np.array ([5])*unc_multiplier
 
     if not green_leaves:
         prior_mean['omega_nir'] = 0.7
@@ -508,18 +520,16 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
         prior_inv_cov_snow['omega_vis'] = 0.12
         prior_inv_cov_snow['omega_nir'] = 0.15
         
-    soil_cov=0.8862* ( prior_inv_cov['a_vis'] * 
-                              prior_inv_cov['a_nir'] )
-    snow_cov=0.8670* (prior_inv_cov_snow['a_vis'] * 
-                             prior_inv_cov_snow['a_nir'] )
+    soil_cov = 0.8862*(prior_inv_cov['a_vis'] * prior_inv_cov['a_nir'])
+    snow_cov = 0.8670*(prior_inv_cov_snow['a_vis'] * prior_inv_cov_snow['a_nir'])
 
     mu_prior = np.zeros(7*N) # 7 parameters, N time steps
     main_diag = np.zeros(7*N) # 7 parameters, N time steps
     for i, parameter in enumerate(prior_mean.iterkeys()):
-        xx = np.where ( snow_qa, prior_mean_snow[parameter],
-                                    prior_mean[parameter] )
+        xx = np.where (snow_qa, prior_mean_snow[parameter],
+                        prior_mean[parameter])
         mu_prior[i*N:((i+1)*N)] = xx
-        xx = np.where ( snow_qa, prior_inv_cov_snow[parameter],
+        xx = np.where (snow_qa, prior_inv_cov_snow[parameter],
                         prior_inv_cov[parameter])
         
         # This needs to be squared for the main diagonal, as variances go there right?
@@ -534,47 +544,16 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
                 C[2*N + i, 5*N + i] = soil_cov
                 C[5*N + i, 2*N + i] = soil_cov
             
-    Cinv = np.linalg.inv( C )
-    Cinv = sp.lil_matrix ( Cinv )
-    prior = eoldas_ng.Prior ( mu_prior, Cinv )
-    return prior
-
-def the_prior ( state, prior_type="TIP_standard" ):
-    mu_prior = OrderedDict ()
-    prior_inv_cov= OrderedDict ()
-    
-    prior_inv_cov['omega_vis'] = np.array ( [.1])
-    prior_inv_cov['d_vis'] = np.array ( [0.7])
-    prior_inv_cov['a_vis'] = np.array ( [0.959])
-    prior_inv_cov['omega_nir'] = np.array ([0.08] )
-    prior_inv_cov['d_nir'] = np.array ([1.5] )
-    prior_inv_cov['a_nir'] = np.array ([.2] )
-    prior_inv_cov['lai'] = np.array ([5] )
-    
-    if prior_type == "TIP_uninformative":
-        for k in prior_inv_cov.iterkeys():
-            prior_inv_cov[k] = prior_inv_cov[k]*2.
-    
-
-    for param in state.parameter_min.iterkeys():
-        if state.transformation_dict.has_key ( param ):
-            mu_prior[param] = state.transformation_dict[param]( 
-                np.array([state.default_values[param]]) )
-        else:
-            mu_prior[param] = np.array([state.default_values[param]])
-            prior_inv_cov[param] = 1./prior_inv_cov[param]**2
-            
-    print "====>>> NO SOIL COVARIANCE TERM YET <<<====="
-    prior = eoldas_ng.Prior ( mu_prior, prior_inv_cov )
+    Cinv = np.linalg.inv(C)
+    Cinv = sp.lil_matrix (Cinv)
+    prior = eoldas_ng.Prior (mu_prior, Cinv)
     return prior
 
 if __name__ == "__main__":
     import cPickle
     from collections import OrderedDict
     import numpy as np
-    import matplotlib.pyplot as plt
 
-    import gp_emulator
     from eoldas_ng import *
     from tip_helpers import StandardStateTIP, ObservationOperatorTIP
     from get_albedo import Observations
@@ -635,7 +614,7 @@ if __name__ == "__main__":
                         required_params= ['omega_vis', 'd_vis', 'a_vis',
                                               'omega_nir', 'd_nir', 'a_nir', 'lai'])
     the_state.add_operator ( "Smooth", smoother)
-    prior = the_prior(the_state)
-    the_state.add_operator ("Prior", prior )
+    #prior = the_prior(the_state)
+    #the_state.add_operator ("Prior", prior )
     retval = the_state.optimize(x_dict, do_unc=True)
 

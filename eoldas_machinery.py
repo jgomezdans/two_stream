@@ -4,14 +4,14 @@ Functions and stuff that run eoldas inversions using the TIP.
 """
 import cPickle
 from collections import OrderedDict
-import numpy as np
-import matplotlib.pyplot as plt
 
 import eoldas_ng
-from tip_helpers import StandardStateTIP, ObservationOperatorTIP
-from tip_helpers import the_prior, bernards_prior
-from get_albedo import Observations
+import matplotlib.pyplot as plt
+import numpy as np
 
+from get_albedo import Observations
+from tip_helpers import StandardStateTIP, ObservationOperatorTIP
+from tip_helpers import bernards_prior
 
 # Define some useful globals
 optimisation_options = {'ftol': 1./10000, 'gtol':1e-12, 
@@ -61,16 +61,40 @@ def retrieve_albedo ( year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"  ):
     passer_snow[passer] = is_snow[passer]
     # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
     # Min of 2.5e-3
-    #bu = bu*0. + 0.005
+    # bu = bu*0. + 0.005
     return observations, mask, bu, passer_snow
 
 
-def tip_inversion ( year, fluxnet_site,  
-        albedo_unc=[0.05, 0.07], prior_type="TIP_standard",
-        vis_emu_pkl="tip_vis_emulator_real.pkl",
-        nir_emu_pkl="tip_nir_emulator_real.pkl",
-        n_tries=15 ):
+def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07],
+                    prior_type="TIP_standard",
+                    vis_emu_pkl="tip_vis_emulator_real.pkl",
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=15):
+    """The JRC-TIP inversion using eoldas. This function sets up the
+    invesion machinery for a particular FLUXNET site and year (assuming
+    these are present in the database!)
 
+    Parameters
+    ----------
+    year : int
+        The year
+    fluxnet_site: str
+        The code of the FLUXNET site (e.g. US-Bo1)
+    albedo_unc: list
+        A 2-element list, containg the relative uncertainty
+    prior_type: str
+        Not used yet
+    vis_emu_pkl: str
+        The emulator file for the visible band.
+    nir_emu_pkl: str
+        The emulator file for the NIR band.
+    n_tries: int
+        Number of restarts for the minimisation. Best one (e.g. lowest
+        cost) is chosen
+
+    Returns
+    -------
+    Good stuff
+    """
     # Start by setting up the state 
     the_state = StandardStateTIP ( state_config, state_grid, 
                                   optimisation_options=optimisation_options)
@@ -86,7 +110,7 @@ def tip_inversion ( year, fluxnet_site,
                 mask, [gp_vis, gp_nir], bu )
     the_state.add_operator("Obs", obsop)
     # Set up the prior
-    #prior = the_prior(the_state, prior_type )
+    ### prior = the_prior(the_state, prior_type )
     prior = bernards_prior ( passer_snow, use_soil_corr=True, green_leaves=False  )
     the_state.add_operator ("Prior", prior )
     # Now, we will do the function minimisation with `n_tries` different starting
@@ -145,8 +169,8 @@ def regularised_tip_inversion ( year, fluxnet_site, regularisation,
                         required_params= ['omega_vis', 'd_vis', 'a_vis',
                                               'omega_nir', 'd_nir', 'a_nir', 'lai'])
     the_state.add_operator ( "Smooth", smoother)
-    prior = the_prior(the_state, prior_type )
-    the_state.add_operator ("Prior", prior )
+    #prior = the_prior(the_state, prior_type )
+    #the_state.add_operator ("Prior", prior )
     retval = the_state.optimize(x_dict, do_unc=True)
 
 if __name__ == "__main__":
