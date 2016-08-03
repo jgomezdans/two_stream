@@ -65,7 +65,7 @@ def retrieve_albedo ( year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"  ):
     return observations, mask, bu, passer_snow
 
 
-def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07],
+def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
                     vis_emu_pkl="tip_vis_emulator_real.pkl",
                     nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=15):
@@ -111,7 +111,7 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07],
     the_state.add_operator("Obs", obsop)
     # Set up the prior
     ### prior = the_prior(the_state, prior_type )
-    prior = bernards_prior ( passer_snow, use_soil_corr=True, green_leaves=False  )
+    prior = bernards_prior ( passer_snow, use_soil_corr=True, green_leaves=green_leaves)
     the_state.add_operator ("Prior", prior )
     # Now, we will do the function minimisation with `n_tries` different starting
     # points. We choose the one with the lowest cost...
@@ -174,27 +174,30 @@ def regularised_tip_inversion ( year, fluxnet_site, regularisation,
     retval = the_state.optimize(x_dict, do_unc=True)
 
 if __name__ == "__main__":
-    retval, state, obs = tip_inversion ( 2005, "US-Bo1")
-    plt.close()
     params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-    for i,p in enumerate ( params ):
-        plt.subplot(4,2, i+1 )
-        plt.fill_between ( state.state_grid, retval['real_ci5pc'][p], 
-                          retval['real_ci95pc'][p], color="0.8" )
-        plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
-                          retval['real_ci75pc'][p], color="0.6" )
+    for year in [2005, 2006, 2007, 2008, 2009, 2010]:
+        retval, state, obs = tip_inversion ( year, "DE-Hai", green_leaves=False)
+        plt.figure()
 
-        plt.plot ( state.state_grid, retval['real_map'][p] )
-        if p in ["d_vis", "d_nir", "lai"]:
-            plt.ylim(0,6)
-        else:
-            plt.ylim(0,1)
-    plt.subplot(4,2,8)
-    fwd = np.array(obs.fwd_modelled_obs)  
-    plt.plot ( obs.observations[:,0], fwd[:,0], 'k+')
-    plt.plot ( obs.observations[:,1], fwd[:,1], 'rx')
-    plt.plot([0,0.7], [0, 0.7], 'k--')
-    plt.plot([2.5e-3, 0.7+0.7*0.07],[2.5e-3, 0.7+0.7*0.07], 'k--', lw=0.5)
-    plt.plot([-2.5e-3, 0.7-0.7*0.07],[-2.5e-3, 0.7-0.7*0.07], 'k--', lw=0.5)
+        for i,p in enumerate ( params ):
+            plt.subplot(4,2, i+1 )
+            plt.fill_between ( state.state_grid, retval['real_ci5pc'][p],
+                              retval['real_ci95pc'][p], color="0.8" )
+            plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
+                              retval['real_ci75pc'][p], color="0.6" )
+
+            plt.plot ( state.state_grid, retval['real_map'][p] )
+            if p in ["d_vis", "d_nir", "lai"]:
+                plt.ylim(0,6)
+            else:
+                plt.ylim(0,1)
+        plt.subplot(4,2,8)
+        fwd = np.array(obs.fwd_modelled_obs)
+        plt.plot ( obs.observations[:,0], fwd[:,0], 'k+')
+        plt.plot ( obs.observations[:,1], fwd[:,1], 'rx')
+        plt.plot([0,0.7], [0, 0.7], 'k--')
+        plt.plot([2.5e-3, 0.7+0.7*0.07],[2.5e-3, 0.7+0.7*0.07], 'k--', lw=0.5)
+        plt.plot([-2.5e-3, 0.7-0.7*0.07],[-2.5e-3, 0.7-0.7*0.07], 'k--', lw=0.5)
+        plt.title ("DE-Hai (%d)" % year )
 
     plt.show()
