@@ -1,12 +1,22 @@
 # Experiments
 
 1. Single TIP inversion
+    Thisis done and works
+
 2. Single TIP inversion with weakened prior
     2.1. No soil correlation
+
+    Not tested this one,
 3. Regularised TIP inversion
     3.1 Change regularisation for LAI (too high, too low, 
     just right)
+
+    Easy to do, but other parameters can/ought to be regulraised too?
+
 4. Use previous year(s) as prior
+
+
+    Needs a bit of work still...
 
 # TIP package 
 The 2stream inversion package (TIP) from JRC. Emulated. Regularised. Improved.
