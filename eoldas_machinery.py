@@ -103,50 +103,88 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     return results[best_solution][1], the_state, obsop
 
 
+def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05, 0.07], green_leaves=False,
+                    prior_type="TIP_standard",
+                    vis_emu_pkl="tip_vis_emulator_real.pkl",
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2):
+    """The JRC-TIP inversion using eoldas. This function sets up the
+    invesion machinery for a particular FLUXNET site and year (assuming
+    these are present in the database!)
 
+    Parameters
+    ----------
+    year : int
+        The year
+    fluxnet_site: str
+        The code of the FLUXNET site (e.g. US-Bo1)
+    albedo_unc: list
+        A 2-element list, containg the relative uncertainty
+    prior_type: str
+        Not used yet
+    vis_emu_pkl: str
+        The emulator file for the visible band.
+    nir_emu_pkl: str
+        The emulator file for the NIR band.
+    n_tries: int
+        Number of restarts for the minimisation. Best one (e.g. lowest
+        cost) is chosen
 
-
-def regularised_tip_inversion ( year, fluxnet_site, regularisation, 
-        albedo_unc=[0.05, 0.07], prior_type="TIP_standard",
-        vis_emu_pkl="tip_vis_albedo_transformed.pkl",
-        nir_emu_pkl="tip_nir_albedo_transformed.pkl" ):
+    Returns
+    -------
+    Good stuff
     """
-    A regularised TIP inversion using eoldas
-    """
-
-
-    the_state = StandardStateTIP ( state_config, state_grid, verbose=True,
+    # Start by setting up the state
+    the_state = StandardStateTIP ( state_config, state_grid,
                                   optimisation_options=optimisation_options)
 
-
+    # Load and prepare the emulators for the TIP
     gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
     gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
-
-    observations, mask, bu, no_snow = retrieve_albedo ( year, fluxnet_site, 
-                                                   albedo_unc )
-
+    # Retieve observatiosn and ancillary stuff from database
+    observations, mask, bu, passer_snow = retrieve_albedo ( year, fluxnet_site,
+                                                       albedo_unc )
+    # Set up the observation operator
     obsop = ObservationOperatorTIP ( state_grid, the_state, observations,
                 mask, [gp_vis, gp_nir], bu )
-
-    x_dict = OrderedDict()
-    for p, v in the_state.default_values.iteritems():
-        x_dict[p] = np.random.rand(len(state_grid))#np.ones_like ( state_grid )*v
-
     the_state.add_operator("Obs", obsop)
-    smoother = eoldas_ng.TemporalSmoother (state_grid, 
-                        np.array([7e2, 1e3, 1e3, 7e2, 1e3, 1e3, 1e3]), 
-                        required_params= ['omega_vis', 'd_vis', 'a_vis',
-                                              'omega_nir', 'd_nir', 'a_nir', 'lai'])
+    # Set up the prior
+    ### prior = the_prior(the_state, prior_type )
+    prior = bernards_prior ( passer_snow, use_soil_corr=True,
+                             green_leaves=green_leaves)
+    the_state.add_operator ("Prior", prior )
+    # Now, we will do the function minimisation with `n_tries` different starting
+    # points. We choose the one with the lowest cost...
+
+    smoother = eoldas_ng.TemporalSmoother ( state_grid, gamma, required_params =
+                                                            ["omega_vis", "d_vis", "a_vis",
+                                                            "omega_nir", "d_nir", "a_nir", "lai"] )
+
     the_state.add_operator ( "Smooth", smoother)
-    #prior = the_prior(the_state, prior_type )
-    #the_state.add_operator ("Prior", prior )
-    retval = the_state.optimize(x_dict, do_unc=True)
+
+
+    x_dict = x0
+    results = []
+    for i in xrange(n_tries):
+        if n_tries > 1:
+            x0 = np.random.multivariate_normal( prior.mu, np.array(np.linalg.inv(prior.inv_cov.todense())))
+            x_dict = the_state._unpack_to_dict ( x0 )
+        retval = the_state.optimize(x_dict, do_unc=True)
+        results.append ( ( the_state.cost_history['global'][-1],
+                         retval ) )
+    best_solution = np.array([ x[0] for x in results]).argmin()
+    print [ x[0] for x in results]
+    print "Chosen cost: %g" % results[best_solution][0]
+    return results[best_solution][1], the_state, obsop
+
+
 
 if __name__ == "__main__":
     params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-    site = "SE-Abi"
-    for year in [2008, 2010]:
-        retval, state, obs = tip_inversion ( year, site, green_leaves=False)
+    site = "DE-Geb"
+    for year in [2008]:
+        retval_s, state, obs = tip_inversion( year, site, green_leaves=False)
+        retval, state, obs = regularised_tip_inversion( year, site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, 1  ],
+                                                        x0=retval_s['real_map'], green_leaves=False)
         fig = plt.figure()
         fig.suptitle("%s (%d)" % (site, year))
 
@@ -157,7 +195,8 @@ if __name__ == "__main__":
             # plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
             #                   retval['real_ci75pc'][p], color="0.6" )
 
-            plt.plot ( state.state_grid, retval['real_map'][p] )
+            plt.plot ( state.state_grid, retval['real_map'][p], '-' )
+            plt.plot ( state.state_grid, retval_s['real_map'][p], '--')
             if p in ["d_vis", "d_nir", "lai"]:
                 plt.ylim(0,6)
             else:
