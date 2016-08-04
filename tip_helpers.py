@@ -14,7 +14,45 @@ from eoldas_ng import State
 
 import time
 from eoldas_ng import State, MetaState, CONSTANT, VARIABLE, FIXED
+from get_albedo import Observations
 
+
+
+def retrieve_albedo(year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"):
+    """
+    A method to retrieve albedo from the practical's albedo database. The method
+    takes the year, the fluxnet site code, a two element list with the associated
+    uncertainy factor as a percentage (e.g. Pinty's would be given as [0.05, 0.07])
+    for the "good" and "other" quality flags.
+    """
+    obs = Observations(albedo_db)
+    albedo_data = obs.query(year, fluxnet_site)
+    passer = albedo_data.albedo_qa != 255
+    passer = np.where(np.logical_or(albedo_data.bhr_vis < 0.01,
+                                    albedo_data.bhr_nir < 0.01),
+                      False, passer)
+
+    doys = albedo_data.doy[passer]
+    observations = np.c_[albedo_data.bhr_vis[passer],
+                         albedo_data.bhr_nir[passer]]
+    full_inversions = albedo_data.albedo_qa[passer] == 0
+    backup_inversions = albedo_data.albedo_qa[passer] == 1
+    is_snow = albedo_data.snow_qa == 1
+    mask = np.c_[doys, doys.astype(np.int) * 0 + 1]
+    bu = observations * 0.0
+    for i in xrange(2):
+        bu[full_inversions, i] = np.max(np.c_[
+                                            np.ones_like(doys[full_inversions]) * 2.5e-3,
+                                            observations[full_inversions, i] * albedo_unc[0]], axis=1)
+        bu[backup_inversions, i] = np.max(np.c_[
+                                              np.ones_like(doys[backup_inversions]) * 2.5e-3,
+                                              observations[backup_inversions, i] * albedo_unc[1]], axis=1)
+    passer_snow = passer.copy()
+    passer_snow[passer] = is_snow[passer]
+    # Observation uncertainty is 5% and 7% for flags 0 and 1, resp
+    # Min of 2.5e-3
+    # bu = bu*0. + 0.005
+    return observations, mask, bu, passer_snow
 
 
 def get_problem_size ( x_dict, state_config, state_grid=None ):
