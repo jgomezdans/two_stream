@@ -109,7 +109,7 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
 def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
                     vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2):
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2, progressbar=None):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
     these are present in the database!)
@@ -174,6 +174,9 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
         retval = the_state.optimize(x_dict, do_unc=True)
         results.append ( ( the_state.cost_history['global'][-1],
                          retval ) )
+        if progressbar is not None:
+            progressbar.value = progressbar.value + 1
+
     best_solution = np.array([ x[0] for x in results]).argmin()
     print [ x[0] for x in results]
     print "Chosen cost: %g" % results[best_solution][0]
