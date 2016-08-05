@@ -1,12 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from IPython.display import display
+
 # Lots of different places that widgets could come from...
+
 try:
-    from ipywidgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox
+    from ipywidgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox, IntProgress
 except ImportError:
     try:
-        from IPython.html.widgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox
+        from IPython.html.widgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox, IntProgress
     except ImportError:
         try:
             from IPython.html.widgets import (interact, CheckboxWidget as Checkbox,
@@ -19,6 +22,7 @@ except ImportError:
 from tip_helpers import retrieve_albedo
 from eoldas_machinery import tip_inversion, regularised_tip_inversion
 
+logo = plt.imread ( "nceologo200.gif")
 
 sites ="""AU-Tum
 BR-Cax
@@ -69,6 +73,8 @@ def visualise_albedos():
         plt.xlim ( 1, 368)
         plt.ylim ( 0, 0.7)
         ax1 = plt.gca()
+        ax1.figure.figimage(logo, 60, 60, alpha=.1, zorder=1)
+
         # Hide the right and top spines
         ax1.spines['right'].set_visible(False)
         ax1.spines['top'].set_visible(False)
@@ -78,15 +84,21 @@ def visualise_albedos():
 
 
 def single_observation_inversion():
-
+    display(f)
     @interact ( fluxnet_site=Dropdown(options=sites),
                 year=IntSlider(min=2004,max=2013, step=1),
                 green_leaves=Checkbox(description="Assume green leaves", default=False),
-                __manual=True)
-    def solve_tip_single_observation ( fluxnet_site, year, green_leaves ):
+                __manual=True )
+    def tip_single_observation ( fluxnet_site, year, green_leaves,
+                                       n_tries=5 ):
+
+        f = IntProgress( min=0, max=n_tries+1 )
+        f.value = 1
+
 
         retval_s, state, obs = tip_inversion( year, fluxnet_site,
-                                              green_leaves=green_leaves, n_tries=5)
+                                              green_leaves=green_leaves,
+                                              n_tries=n_tries, progressbar=f)
         mu = state.operators['Prior'].mu
         cinv = state.operators['Prior'].inv_cov
         c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
@@ -94,7 +106,7 @@ def single_observation_inversion():
 
         fig, axs = plt.subplots(nrows=5, ncols=2, figsize=(14, 12))
         axs = axs.flatten()
-        fig.suptitle("%s (%d)" % (fluxnet_site, year))
+        fig.suptitle("%s (%d)" % (fluxnet_site, year), fontsize=18)
         params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
         post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
@@ -131,6 +143,7 @@ def single_observation_inversion():
         axs[7].plot ( [0,0.9], [0, 0.9], 'k--', lw=0.5)
         axs[7].legend(loc='best')
 
+
         axs[8].vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
                       obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
         axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
@@ -155,7 +168,6 @@ def single_observation_inversion():
             axs[i].yaxis.set_ticks_position('left')
             axs[i].xaxis.set_ticks_position('bottom')
 
-
-#if __name__ == "__main__":
+        fig.figimage(logo, fig.bbox.xmax - 500, fig.bbox.ymax - 250, alpha=.4, zorder=1)#if __name__ == "__main__":
     #print plot_albedos ( "DE-Geb", 2004)
     #solve_tip_single_observation( "DE-Geb", 2008, False)
