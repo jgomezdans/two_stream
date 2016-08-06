@@ -24,7 +24,33 @@ from eoldas_machinery import tip_inversion, regularised_tip_inversion
 
 logo = plt.imread ( "nceologo200.gif")
 
-sites ="""AU-Tum
+sites = """AU-Tum (Tumbarumba)
+BR-Cax (Caxiuana Forest-Almeirim)
+CA-Ca1 (BC-Campbell River 1949 Douglas-fir)
+DE-Geb (Gebesee)
+DE-Hai (Hainich)
+ES-LMa (Las Majadas del Tietar)
+FI-Hyy (Hyytiala)
+FR-Lam (Lamasquere)
+IT-SRo (San Rossore)
+RU-Ylr (Yakutsk-Larch)
+SE-Abi (Abisko)
+US-Bar (Bartlett Experimental Forest)
+US-Bo1 (Bondville)
+US-Brw (Barrow)
+US-Dk2 (Duke Forest Hardwoods)
+US-Ha2 (Harvard Forest Hemlock Site)
+US-MMS (Morgan Monroe State Forest)
+US-Me2 (Metolius Intermediate Pine)
+US-Me3 (Metolius Second Young Pine)
+US-Ne1 (Mead - irrigated continuous maize site)
+US-Ne2 (Mead - irrigated maize-soybean rotation site)
+US-Ne3 (Mead - rainfed maize-soybean rotation site)
+US-Ton (Tonzi Ranch)
+ZA-Kru (Skukuza)""".split("\n")
+
+
+sites="""AU-Tum
 BR-Cax
 CA-Ca1
 DE-Geb
@@ -53,7 +79,9 @@ tip_params = [ r'$\omega_{vis}\; [-]$', r'$d_{vis}\; [-]$', r'$\alpha_{vis}\; [-
               r'$\omega_{nir}\; [-]$', r'$d_{nir}\; [-]$', r'$\alpha_{nir}\; [-]$',
               r'$LAI_{eff}\;[m^{2}m^{-2}]$' ]
 
+
 def visualise_albedos():
+
     @interact ( fluxnet_site=Dropdown(options=sites), year=IntSlider(min=2004,max=2013, step=1))
     def plot_albedos ( fluxnet_site, year ):
         observations, mask, bu, passer_snow = retrieve_albedo(year, fluxnet_site,
