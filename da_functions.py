@@ -1,3 +1,4 @@
+import cPickle
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
@@ -67,6 +68,81 @@ ZA-Kru""".split("\n")
 tip_params = [ r'$\omega_{vis}\; [-]$', r'$d_{vis}\; [-]$', r'$\alpha_{vis}\; [-]$',
               r'$\omega_{nir}\; [-]$', r'$d_{nir}\; [-]$', r'$\alpha_{nir}\; [-]$',
               r'$LAI_{eff}\;[m^{2}m^{-2}]$' ]
+
+def only_one_set ( *args ):
+        return sum(args) == 1
+
+def plot_albedo ( albedo, x):
+
+    plt.plot ( x, albedo, 'o-', mfc="none")
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_ticks_position('bottom')
+
+
+def visualise_twostream ( omega_vis=False, d_vis=False, a_vis=False,
+                          omega_nir=False, d_nir=False, a_nir=False, lai_vis=False,
+                          lai_nir=False,
+                          vis_emu_pkl="tip_vis_emulator_real.pkl",
+                          nir_emu_pkl="tip_nir_emulator_real.pkl" ):
+
+    n = 20
+    param_vis = np.array([0.17,1, 0.1,2])
+    param_nir = np.array([0.7, 2, 0.18, 2])
+
+    gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
+    gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+    if not only_one_set ( omega_vis, d_vis, a_vis, omega_nir, d_nir, a_nir,
+                          lai_vis, lai_nir):
+
+        raise ValueError,  "You have either set up more than one variable or none"
+    x = np.ones ((n,4)) * param_vis
+    if omega_vis:
+        x[:,0] = np.linspace(0, 0.9, n)
+        albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_vis,  np.linspace(0, 0.9, n) )
+        return
+    elif d_vis:
+        x[:,1] = np.linspace(0.2, 4, n)
+        albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_vis,  np.linspace(0.2,4, n) )
+        return
+    elif a_vis:
+        x[:, 2] = np.linspace(0, 0.9, n)
+        albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_vis,  np.linspace(0,0.9, n) )
+        return
+    elif lai_vis:
+        x[:, 3] = np.linspace(0,6, n)
+        albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_vis,  np.linspace(0,6, n) )
+        return
+
+
+    x = np.ones (( n,4))* param_nir
+    if omega_nir:
+        x[:,0] = np.linspace(0, 0.9, n)
+        albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_nir,  np.linspace(0, 0.9, n) )
+        return
+    elif d_nir:
+        x[:,1] = np.linspace(0.2, 4, n)
+        albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_nir,  np.linspace(0.2,4, n) )
+        return
+    elif a_nir:
+        x[:, 2] = np.linspace(0, 0.9, n)
+        albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_nir,  np.linspace(0,0.9, n) )
+        return
+    elif lai_nir:
+        x[:, 3] = np.linspace(0,6, n)
+        albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
+        plot_albedo ( albedo_nir,  np.linspace(0,6, n) )
+        return
 
 
 def visualise_albedos ( fluxnet_site, year ):
@@ -171,7 +247,7 @@ def single_observation_inversion( fluxnet_site, year, green_leaves=False, n_trie
     plt.savefig( "single_obs_inversion_%s_%04d.pdf" % ( fluxnet_site, year), dpi=300, boox_inches="tight")
 
 def regularised_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
-                                       n_tries=5 ):
+                                       n_tries=5, albedo_unc=[0.05, 0.07] ):
 
     retval_s, state, obs = tip_inversion( year, fluxnet_site, green_leaves=green_leaves,
                                           n_tries=n_tries )
@@ -183,7 +259,7 @@ def regularised_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
 
     retval, state, obs = regularised_tip_inversion( year, fluxnet_site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai  ],
                                                     x0=retval_s['real_map'], green_leaves=green_leaves,
-                                                    n_tries=n_tries )
+                                                    n_tries=n_tries, albedo_unc=albedo_unc )
     mu = state.operators['Prior'].mu
     cinv = state.operators['Prior'].inv_cov
     c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
@@ -255,7 +331,7 @@ def regularised_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
     plt.savefig("regularised_model_%s_%04d.pdf" % (fluxnet_site, year), dpi=300, bbox_inches="tight")
 
 
-def prior_experiment (  fluxnet_site, year, green_leaves, gamma_lai, inflation=2.,
+def prior_experiment (  fluxnet_site, year, gamma_lai, green_leaves=False,  inflation=2.,
                                        n_tries=5 ):
 
 
