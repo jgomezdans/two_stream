@@ -109,7 +109,8 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
 def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
                     vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2, progressbar=None):
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2,
+                    prior=None, progressbar=None):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
     these are present in the database!)
@@ -152,9 +153,12 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
     the_state.add_operator("Obs", obsop)
     # Set up the prior
     ### prior = the_prior(the_state, prior_type )
-    prior = bernards_prior ( passer_snow, use_soil_corr=True,
-                             green_leaves=green_leaves)
-    the_state.add_operator ("Prior", prior )
+    if prior is None:
+        prior = bernards_prior(passer_snow, use_soil_corr=True,
+                               green_leaves=green_leaves)
+        the_state.add_operator ("Prior", prior )
+    else:
+        the_state.add_operator("Prior", prior)
     # Now, we will do the function minimisation with `n_tries` different starting
     # points. We choose the one with the lowest cost...
 
