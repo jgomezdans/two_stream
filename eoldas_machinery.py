@@ -139,7 +139,7 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
     """
     # Start by setting up the state
     the_state = StandardStateTIP ( state_config, state_grid,
-                                  optimisation_options=optimisation_options)
+                                  optimisation_options=optimisation_options )
 
     # Load and prepare the emulators for the TIP
     gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
