@@ -1,0 +1,6 @@
+{
+  "name": "Two stream",
+  "tagline": "The 2stream inversion package (TIP) from JRC. Emulated. Regularised. Improved.",
+  "body": "<p><img src=\"http://www.esa.int/esalogo/images/logotype/img_colorlogo_darkblue.gif\" scale=\"10%\"  align=\"left\" /> <img src=\"nceologo200.gif\", align=\"right\" /></p>\r\n<p>&nbsp;</p>\r\n<p>&nbsp;</p>\r\n<p>&nbsp;</p>\r\n\r\n# Experiments with the Two Stream radiative transfer model\r\n\r\n## ESA Summer School 2016\r\n\r\n### J Gómez-Dans (National Centre for Earth Observation and University College London)\r\n\r\n\r\nThis repository contains some experiments on using the Two Stream radiative transfer model to invert land surface parameters. The experiments are written in Python (2.7), and use [IPython notebooks](https://ipython.org/), and  requires the installation of the `eoldas_ng` package, as well as the `gp_emulators` packages, as well as the standar Python scientific stack ([numpy](http://numpy.org), [scipy](http://scipy.org) and [matplotlib](http://matplotlib.org)). You can probably install most of this using the [Anaconda Python Distribution](https://www.continuum.io/downloads).\r\n\r\nFor more information, contact the author at ``j.gomez-dans AT ucl.ac.uk``\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
