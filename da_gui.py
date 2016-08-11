@@ -24,7 +24,7 @@ from eoldas_ng import Prior
 from tip_helpers import retrieve_albedo
 from eoldas_machinery import tip_inversion, regularised_tip_inversion
 
-logo = plt.imread ( "nceologo200.gif")
+logo = plt.imread ( "nceologo200.png")
 
 sites = """AU-Tum (Tumbarumba)
 BR-Cax (Caxiuana Forest-Almeirim)
