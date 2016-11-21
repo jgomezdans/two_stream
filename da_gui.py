@@ -190,10 +190,11 @@ def explore_twostream():
 def single_observation_inversion():
     @interact ( fluxnet_site=Dropdown(options=sites),
                 year=IntSlider(min=2004,max=2013, step=1),
-                green_leaves=Checkbox(description="Assume green leaves", default=False),
+                green_leaves=Checkbox(description="Assume green leaves", 
+                default=False),
                 __manual=True )
     def tip_single_observation ( fluxnet_site, year, green_leaves,
-                                       n_tries=5 ):
+                                       n_tries=10 ):
 
         f = IntProgress(min=0, max=n_tries + 1)
         f.value = 1
@@ -282,7 +283,7 @@ def regularised_inversion ( ):
                 green_leaves=Checkbox(description="Green leaves", default=False),
                 __manual=True )
     def eoldas_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
-                                       n_tries=5 ):
+                                       n_tries=10 ):
         f = IntProgress(min=0, max=2*n_tries + 1)
         f.value = 1
         display(f)
@@ -380,7 +381,7 @@ def regularised_inversion_unc ( ):
                 __manual=True )
     def eoldas_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
                           albedo_unc_avg, albedo_unc_good,
-                          n_tries=5  ):
+                          n_tries=10  ):
         f = IntProgress(min=0, max=2*n_tries + 1)
         f.value = 1
         display(f)
