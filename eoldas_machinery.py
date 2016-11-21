@@ -2,8 +2,11 @@
 """
 Functions and stuff that run eoldas inversions using the TIP.
 """
+import copy
+from multiprocessing.dummy import Pool
 import cPickle
 from collections import OrderedDict
+import traceback
 
 import eoldas_ng
 import matplotlib.pyplot as plt
@@ -33,8 +36,8 @@ state_config['lai'] = eoldas_ng.VARIABLE
 def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
                     vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2,
-                    progressbar=None):
+                    nir_emu_pkl="tip_nir_emulator_real.pkl", parallel=False, 
+                    n_tries=2, progressbar=None):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
     these are present in the database!)
@@ -56,11 +59,28 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     n_tries: int
         Number of restarts for the minimisation. Best one (e.g. lowest
         cost) is chosen
+    parallel: bool
+        Whether to run the minimisation in parallel or not
+    progressbar: None or obj
+        A progressbar object to update 
 
     Returns
     -------
     Good stuff
     """
+    # We'll be running things in parallel, so a dummy function here is useful
+    def f (x_dict):
+        try:
+            state = copy.deepcopy (the_state)
+            retval = state.optimize(x_dict, do_unc=True)
+            cost= state.cost_history['global'][-1]
+            solution = retval
+        except Exception:
+            print("Exception in worker:")
+            traceback.print_exc()
+            raise
+        return cost, solution
+    
     # Start by setting up the state 
     the_state = StandardStateTIP ( state_config, state_grid, 
                                   optimisation_options=optimisation_options)
@@ -84,26 +104,26 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     # points. We choose the one with the lowest cost...
 
 
-
-    retval = single_inversion( year, fluxnet_site)
-    x_dict = {}
-    for i,k in enumerate ( ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']):
-        x_dict[k] = retval[:,i]
-
-    results = []
-    for i in xrange(n_tries):
-        if n_tries > 1:
-            x0 = np.random.multivariate_normal( prior.mu, np.array(np.linalg.inv(prior.inv_cov.todense())))
-            x_dict = the_state._unpack_to_dict ( x0 )
-        retval = the_state.optimize(x_dict, do_unc=True)
-        results.append ( ( the_state.cost_history['global'][-1],
-                         retval ) )
-        if progressbar is not None:
-            progressbar.value = progressbar.value + 1
+    # Is this needed?
+    #retval = single_inversion( year, fluxnet_site)
+    #x_dict = {}
+    #for i,k in enumerate ( ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']):
+    #    x_dict[k] = retval[:,i]
+    x_tries = np.random.multivariate_normal( prior.mu, 
+                    np.array(np.linalg.inv(prior.inv_cov.todense())), 
+                    size=n_tries)
+    dicts = [ the_state._unpack_to_dict (x) for x in x_tries ]
+    pool = Pool()
+    results = pool.map ( f, dicts )
     best_solution = np.array([ x[0] for x in results]).argmin()
     print [ x[0] for x in results]
     print "Chosen cost: %g" % results[best_solution][0]
+    # This is needed to do the forward calculations
+    x = the_state.pack_from_dict ( results[best_solution][1]['real_map'])
+    _ = the_state.cost ( x )
     return results[best_solution][1], the_state, obsop
+    
+    
 
 
 def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05, 0.07], green_leaves=False,
@@ -137,6 +157,19 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
     -------
     Good stuff
     """
+    # The parallel dispatcher
+    def f (x_dict):
+        try:
+            state = copy.deepcopy (the_state)
+            retval = state.optimize(x_dict, do_unc=True)
+            cost= state.cost_history['global'][-1]
+            solution = retval
+        except Exception:
+            print("Exception in worker:")
+            traceback.print_exc()
+            raise
+        return cost, solution
+
     # Start by setting up the state
     the_state = StandardStateTIP ( state_config, state_grid,
                                   optimisation_options=optimisation_options )
@@ -169,21 +202,29 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
     the_state.add_operator ( "Smooth", smoother)
 
 
-    x_dict = x0
-    results = []
-    for i in xrange(n_tries):
-        if n_tries > 1:
-            x0 = np.random.multivariate_normal( prior.mu, np.array(np.linalg.inv(prior.inv_cov.todense())))
-            x_dict = the_state._unpack_to_dict ( x0 )
-        retval = the_state.optimize(x_dict, do_unc=True)
-        results.append ( ( the_state.cost_history['global'][-1],
-                         retval ) )
-        if progressbar is not None:
-            progressbar.value = progressbar.value + 1
+    x_tries = np.random.multivariate_normal( prior.mu, 
+                    np.array(np.linalg.inv(prior.inv_cov.todense())), 
+                    size=n_tries)
+    dicts = [ the_state._unpack_to_dict (x) for x in x_tries ]
+    pool = Pool()
+    results = pool.map ( f, dicts )
+    #####for i in xrange(n_tries):
+        #####if n_tries > 1:
+            #####x0 = np.random.multivariate_normal( prior.mu, np.array(np.linalg.inv(prior.inv_cov.todense())))
+            #####x_dict = the_state._unpack_to_dict ( x0 )
+        #####retval = the_state.optimize(x_dict, do_unc=True)
+        #####results.append ( ( the_state.cost_history['global'][-1],
+                         #####retval ) )
+        #####if progressbar is not None:
+            #####progressbar.value = progressbar.value + 1
 
     best_solution = np.array([ x[0] for x in results]).argmin()
     print [ x[0] for x in results]
     print "Chosen cost: %g" % results[best_solution][0]
+    # This is needed to do the forward calculations
+    x = the_state.pack_from_dict ( results[best_solution][1]['real_map'])
+    _ = the_state.cost ( x )
+
     return results[best_solution][1], the_state, obsop
 
 
@@ -192,7 +233,7 @@ if __name__ == "__main__":
     params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
     site = "DE-Geb"
     for year in [2008]:
-        retval_s, state, obs = tip_inversion( year, site, green_leaves=False)
+        retval_s, state, obs = tip_inversion( year, site, green_leaves=False, n_tries=4)
         retval, state, obs = regularised_tip_inversion( year, site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, 1  ],
                                                         x0=retval_s['real_map'], green_leaves=False)
         fig = plt.figure()
