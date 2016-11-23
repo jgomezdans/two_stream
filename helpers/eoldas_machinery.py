@@ -35,8 +35,8 @@ state_config['lai'] = eoldas_ng.VARIABLE
 
 def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
-                    vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", parallel=False, 
+                    vis_emu_pkl="helpers/tip_vis_emulator_real.pkl",
+                    nir_emu_pkl="helpers/tip_nir_emulator_real.pkl", parallel=False,
                     n_tries=2, progressbar=None):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
@@ -62,7 +62,7 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     parallel: bool
         Whether to run the minimisation in parallel or not
     progressbar: None or obj
-        A progressbar object to update 
+        A progressbar object to update
 
     Returns
     -------
@@ -80,9 +80,9 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
             traceback.print_exc()
             raise
         return cost, solution
-    
-    # Start by setting up the state 
-    the_state = StandardStateTIP ( state_config, state_grid, 
+
+    # Start by setting up the state
+    the_state = StandardStateTIP ( state_config, state_grid,
                                   optimisation_options=optimisation_options)
 
     # Load and prepare the emulators for the TIP
@@ -90,7 +90,7 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
     # Retieve observatiosn and ancillary stuff from database
     observations, mask, bu, passer_snow = retrieve_albedo ( year, fluxnet_site,
-                                                       albedo_unc )    
+                                                       albedo_unc )
     # Set up the observation operator
     obsop = ObservationOperatorTIP ( state_grid, the_state, observations,
                 mask, [gp_vis, gp_nir], bu )
@@ -109,8 +109,8 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     #x_dict = {}
     #for i,k in enumerate ( ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']):
     #    x_dict[k] = retval[:,i]
-    x_tries = np.random.multivariate_normal( prior.mu, 
-                    np.array(np.linalg.inv(prior.inv_cov.todense())), 
+    x_tries = np.random.multivariate_normal( prior.mu,
+                    np.array(np.linalg.inv(prior.inv_cov.todense())),
                     size=n_tries)
     dicts = [ the_state._unpack_to_dict (x) for x in x_tries ]
     pool = Pool()
@@ -122,14 +122,14 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     x = the_state.pack_from_dict ( results[best_solution][1]['real_map'])
     _ = the_state.cost ( x )
     return results[best_solution][1], the_state, obsop
-    
-    
+
+
 
 
 def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05, 0.07], green_leaves=False,
                     prior_type="TIP_standard",
-                    vis_emu_pkl="tip_vis_emulator_real.pkl",
-                    nir_emu_pkl="tip_nir_emulator_real.pkl", n_tries=2,
+                    vis_emu_pkl="helpers/tip_vis_emulator_real.pkl",
+                    nir_emu_pkl="helpers/tip_nir_emulator_real.pkl", n_tries=2,
                     prior=None, progressbar=None):
     """The JRC-TIP inversion using eoldas. This function sets up the
     invesion machinery for a particular FLUXNET site and year (assuming
@@ -202,8 +202,8 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
     the_state.add_operator ( "Smooth", smoother)
 
 
-    x_tries = np.random.multivariate_normal( prior.mu, 
-                    np.array(np.linalg.inv(prior.inv_cov.todense())), 
+    x_tries = np.random.multivariate_normal( prior.mu,
+                    np.array(np.linalg.inv(prior.inv_cov.todense())),
                     size=n_tries)
     dicts = [ the_state._unpack_to_dict (x) for x in x_tries ]
     pool = Pool()

@@ -94,8 +94,8 @@ def single_inversion ( year, site ):
     n_tries = 2
     observations, mask, bu, passer_snow = retrieve_albedo( year, site, [0.05, 0.07])
 
-    vis_emu_pkl = "tip_vis_emulator_real.pkl"
-    nir_emu_pkl = "tip_nir_emulator_real.pkl"
+    vis_emu_pkl = "helpers/tip_vis_emulator_real.pkl"
+    nir_emu_pkl = "helpers/tip_nir_emulator_real.pkl"
     gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
     gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
     x0 = mu_prior

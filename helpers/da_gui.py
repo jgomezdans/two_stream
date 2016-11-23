@@ -131,8 +131,8 @@ def explore_twostream():
 
 
     def visualise_twostream ( parameter):
-        vis_emu_pkl="tip_vis_emulator_real.pkl"
-        nir_emu_pkl="tip_nir_emulator_real.pkl"
+        vis_emu_pkl="helpers/tip_vis_emulator_real.pkl"
+        nir_emu_pkl="helpers/tip_nir_emulator_real.pkl"
 
         n = 20
         param_vis = np.array([0.17,1, 0.1,2])
@@ -387,6 +387,7 @@ def regularised_inversion_unc ( ):
         display(f)
         # convert uncertainties from percent
         albedo_unc = [ albedo_unc_good*0.01, albedo_unc_avg*0.01 ]
+        print albedo_unc
         retval_s, state, obs = tip_inversion( year, fluxnet_site, albedo_unc=albedo_unc,
                                              green_leaves=green_leaves,
                                             n_tries=n_tries, progressbar=f )

@@ -625,8 +625,8 @@ if __name__ == "__main__":
                                   optimisation_options=optimisation_options)
 
 
-    gp_vis = cPickle.load(open("tip_vis_albedo_transformed.pkl", 'r'))
-    gp_nir = cPickle.load(open("tip_nir_albedo_transformed.pkl", 'r'))
+    gp_vis = cPickle.load(open("helpers/tip_vis_albedo_transformed.pkl", 'r'))
+    gp_nir = cPickle.load(open("helpers/tip_nir_albedo_transformed.pkl", 'r'))
 
     obs = Observations ( "helpers/albedo.sql" )
     albedo_data = obs.query( 2009, "US-Bo1" )
