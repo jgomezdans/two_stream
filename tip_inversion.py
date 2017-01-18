@@ -56,7 +56,7 @@ iprior_cov_snow = np.linalg.inv ( prior_cov_snow )
 
 def tip_single_inversion ( x0, albedo, bu, mu, inv_cov_prior, gp_vis, gp_nir ):
 
-    x0 = mu
+    #x0 = mu
     albedo.squeeze()
     def cost (x):
 
