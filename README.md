@@ -1,4 +1,4 @@
-<p><img src="cropped-multiply_banner_2016.jpg" scale="10%"  align="left" /> <img align="right" src="http://www.nceo.ac.uk/wp-content/themes/nceo/assets/images//logos/img_logo_white.svg" /></p>
+<p><img src="cropped-multiply_banner_2016.jpg" scale="10%"  align="left" /> <img align="right" src="nceologo200.png" /></p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>
