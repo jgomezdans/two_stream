@@ -104,7 +104,7 @@ class Observations ( object ):
                 """ % ( site_name, year ) )
             try:
                 # We already have data stored ;-)
-                first_row = result.next()
+                first_row = next(result)
                 t_axis = []
                 albedo_vis = []
                 albedo_nir = []
@@ -171,15 +171,15 @@ if __name__ == "__main__":
         for line in fp:
             if not line.startswith("#"):
                 (site,site_code,nyears,lat,lon,lc1,lc2) = line.split(";")
-                print "Grabbing %s (%s)->(%s)" % ( site_code, lc1, lc2)
-                for year in xrange (2004,2014):
-                    print "\tYear %d" % year
+                print("Grabbing %s (%s)->(%s)" % ( site_code, lc1, lc2))
+                for year in range (2004,2014):
+                    print("\tYear %d" % year)
                     try:
                         x = obs.query ( year, site_code.replace("'",""), 
                                    longitude=float(lon), 
                                    latitude=float(lat) )
                     except:
-                        print "It seems I can't do it"
+                        print("It seems I can't do it")
                     
                     
             

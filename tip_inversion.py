@@ -2,7 +2,7 @@
 """
 A Python/GP version of the TIP
 """
-import cPickle
+import pickle
 from collections import OrderedDict
 
 import eoldas_ng
@@ -96,8 +96,8 @@ def single_inversion ( year, site ):
 
     vis_emu_pkl = "tip_vis_emulator_real.pkl"
     nir_emu_pkl = "tip_nir_emulator_real.pkl"
-    gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
-    gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+    gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
+    gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
     x0 = mu_prior
     state = np.zeros((46,7))
 
@@ -119,7 +119,7 @@ def single_inversion ( year, site ):
 
             cost_list = np.zeros(n_tries)
             solutions = np.zeros((n_tries, 7))
-            for trial in xrange(n_tries):
+            for trial in range(n_tries):
                  if trial > 0:
                      while True:
                          x0 = np.random.multivariate_normal(mu, cov_prior, 1)

@@ -1,4 +1,4 @@
-import cPickle
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -138,8 +138,8 @@ def explore_twostream():
         param_vis = np.array([0.17,1, 0.1,2])
         param_nir = np.array([0.7, 2, 0.18, 2])
 
-        gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
-        gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+        gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
+        gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
         x = np.ones ((n,4)) * param_vis
         if parameter == "omega_vis":
             x[:,0] = np.linspace(0, 0.9, n)
@@ -261,7 +261,7 @@ def single_observation_inversion():
         axs[8].set_xlabel("DoY [d]")
         axs[9].set_xlabel("DoY [d]")
 
-        for i in xrange(10):
+        for i in range(10):
 
             if i != 7:
                 axs[i].set_xlim(1, 370)
@@ -355,7 +355,7 @@ def regularised_inversion ( ):
         axs[8].set_xlabel("DoY [d]")
         axs[9].set_xlabel("DoY [d]")
 
-        for i in xrange(10):
+        for i in range(10):
 
             if i != 7:
                 axs[i].set_xlim(1, 370)
@@ -456,7 +456,7 @@ def regularised_inversion_unc ( ):
         axs[8].set_xlabel("DoY [d]")
         axs[9].set_xlabel("DoY [d]")
 
-        for i in xrange(10):
+        for i in range(10):
 
             if i != 7:
                 axs[i].set_xlim(1, 370)
@@ -488,7 +488,7 @@ def prior_experiment ( ):
         display(f)
 
         prior_set = []
-        for train_year in xrange ( n_years ):
+        for train_year in range ( n_years ):
             this_year = (year - n_years - 1)  + train_year
             retval_s, state, obs = tip_inversion( this_year, fluxnet_site, green_leaves=green_leaves,
                                               n_tries=2 )
@@ -566,7 +566,7 @@ def prior_experiment ( ):
         axs[8].set_xlabel("DoY [d]")
         axs[9].set_xlabel("DoY [d]")
 
-        for i in xrange(10):
+        for i in range(10):
 
             if i != 7:
                 axs[i].set_xlim(1, 370)

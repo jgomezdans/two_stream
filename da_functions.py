@@ -1,4 +1,4 @@
-import cPickle
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
@@ -93,12 +93,12 @@ def visualise_twostream ( omega_vis=False, d_vis=False, a_vis=False,
     param_vis = np.array([0.17,1, 0.1,2])
     param_nir = np.array([0.7, 2, 0.18, 2])
 
-    gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
-    gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+    gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
+    gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
     if not only_one_set ( omega_vis, d_vis, a_vis, omega_nir, d_nir, a_nir,
                           lai_vis, lai_nir):
 
-        raise ValueError,  "You have either set up more than one variable or none"
+        raise ValueError("You have either set up more than one variable or none")
     x = np.ones ((n,4)) * param_vis
     if omega_vis:
         x[:,0] = np.linspace(0, 0.9, n)
@@ -232,7 +232,7 @@ def single_observation_inversion( fluxnet_site, year, green_leaves=False, n_trie
     axs[8].set_xlabel("DoY [d]")
     axs[9].set_xlabel("DoY [d]")
 
-    for i in xrange(10):
+    for i in range(10):
 
         if i != 7:
             axs[i].set_xlim(1, 370)
@@ -316,7 +316,7 @@ def regularised_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
     axs[8].set_xlabel("DoY [d]")
     axs[9].set_xlabel("DoY [d]")
 
-    for i in xrange(10):
+    for i in range(10):
 
         if i != 7:
             axs[i].set_xlim(1, 370)
@@ -404,7 +404,7 @@ def prior_experiment (  fluxnet_site, year, gamma_lai, green_leaves=False,  infl
     axs[8].set_xlabel("DoY [d]")
     axs[9].set_xlabel("DoY [d]")
 
-    for i in xrange(10):
+    for i in range(10):
 
         if i != 7:
             axs[i].set_xlim(1, 370)

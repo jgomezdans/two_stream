@@ -40,7 +40,7 @@ def retrieve_albedo(year, fluxnet_site, albedo_unc, albedo_db="albedo.sql"):
     is_snow = albedo_data.snow_qa == 1
     mask = np.c_[doys, doys.astype(np.int) * 0 + 1]
     bu = observations * 0.0
-    for i in xrange(2):
+    for i in range(2):
         bu[full_inversions, i] = np.max(np.c_[
                                             np.ones_like(doys[full_inversions]) * 2.5e-3,
                                             observations[full_inversions, i] * albedo_unc[0]], axis=1)
@@ -68,7 +68,7 @@ def get_problem_size ( x_dict, state_config, state_grid=None ):
         A state configuration ordered dictionary
     """
     n_params = 0
-    for param, typo in state_config.iteritems():
+    for param, typo in state_config.items():
         if typo == CONSTANT:
             n_params += 1
         elif typo == VARIABLE:
@@ -142,7 +142,7 @@ class StandardStateTIP ( State ):
 
         self.verbose = verbose
         self.bounds = []
-        for ( i, param ) in enumerate ( self.state_config.iterkeys() ):
+        for ( i, param ) in enumerate ( self.state_config.keys() ):
             self.bounds.append ( [ self.parameter_min[param],
                                    self.parameter_max[param]] )
             # Define parameter transformations
@@ -193,7 +193,7 @@ class ObservationOperatorTIP ( object ):
         try:
             self.n_obs, self.n_bands = self.observations.shape
         except:
-            raise ValueError, "Typically, obs should be (n_obs, n_bands)"
+            raise ValueError("Typically, obs should be (n_obs, n_bands)")
         self.mask = mask
         assert ( self.n_obs ) == mask.shape[0]
         self.state_grid = state_grid
@@ -230,15 +230,15 @@ class ObservationOperatorTIP ( object ):
         cost = 0.
         n, n_elems = get_problem_size ( x_dict, state_config )
         der_cost = np.zeros ( n )
-        x_params = np.empty ( ( len( x_dict.keys()), \
+        x_params = np.empty ( ( len( list(x_dict.keys())), \
                 self.nt ) )
         j = 0
         ii = 0
         
-        the_derivatives = np.zeros ( ( len( x_dict.keys()), \
+        the_derivatives = np.zeros ( ( len( list(x_dict.keys())), \
                 self.nt ) )
         
-        for param, typo in state_config.iteritems():
+        for param, typo in state_config.items():
         
             if typo == FIXED or  typo == CONSTANT:
                 #if self.state.transformation_dict.has_key ( param ):
@@ -295,7 +295,7 @@ class ObservationOperatorTIP ( object ):
             istart_doy = tstep
         
         j = 0
-        for  i, (param, typo) in enumerate ( state_config.iteritems()) :
+        for  i, (param, typo) in enumerate ( state_config.items()) :
             if typo == CONSTANT:
                 der_cost[j] = the_derivatives[i, : ].sum()
                 j += 1
@@ -416,12 +416,12 @@ class ObservationOperatorTIP ( object ):
         
         der_cost = np.zeros ( n )
         h = sp.lil_matrix ( (n,n))
-        x_params = np.empty ( ( len( x_dict.keys()), self.nt ) )
+        x_params = np.empty ( ( len( list(x_dict.keys())), self.nt ) )
         j = 0
         ii = 0
-        the_derivatives = np.zeros ( ( len( x_dict.keys()), self.nt ) )
-        param_pattern = np.zeros ( len( state_config.items()))
-        for param, typo in state_config.iteritems():
+        the_derivatives = np.zeros ( ( len( list(x_dict.keys())), self.nt ) )
+        param_pattern = np.zeros ( len( list(state_config.items())))
+        for param, typo in state_config.items():
         
             if typo == FIXED:  
                 #if self.state.transformation_dict.has_key ( param ):
@@ -575,7 +575,7 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
 
     mu_prior = np.zeros(7*N) # 7 parameters, N time steps
     main_diag = np.zeros(7*N) # 7 parameters, N time steps
-    for i, parameter in enumerate(prior_mean.iterkeys()):
+    for i, parameter in enumerate(prior_mean.keys()):
         xx = np.where (snow_qa, prior_mean_snow[parameter],
                         prior_mean[parameter])
         mu_prior[i*N:((i+1)*N)] = xx
@@ -585,7 +585,7 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
         main_diag[i*N:((i+1)*N)] = xx**2
     C = np.diag( main_diag )
     if use_soil_corr:
-        for i in xrange(N):
+        for i in range(N):
             if snow_qa[i]:
                 C[2*N + i, 5*N + i] = snow_cov
                 C[5*N + i, 2*N + i] = snow_cov
@@ -599,7 +599,7 @@ def bernards_prior ( snow_qa, unc_multiplier=1.,green_leaves=True,
     return prior
 
 if __name__ == "__main__":
-    import cPickle
+    import pickle
     from collections import OrderedDict
     import numpy as np
 
@@ -624,8 +624,8 @@ if __name__ == "__main__":
                                   optimisation_options=optimisation_options)
 
 
-    gp_vis = cPickle.load(open("tip_vis_albedo_transformed.pkl", 'r'))
-    gp_nir = cPickle.load(open("tip_nir_albedo_transformed.pkl", 'r'))
+    gp_vis = pickle.load(open("tip_vis_albedo_transformed.pkl", 'r'))
+    gp_nir = pickle.load(open("tip_nir_albedo_transformed.pkl", 'r'))
 
     obs = Observations ( "albedo.sql" )
     albedo_data = obs.query( 2009, "US-Bo1" )
@@ -638,7 +638,7 @@ if __name__ == "__main__":
     no_snow = albedo_data.snow_qa[passer] == 0
     mask = np.c_[ doys, doys.astype(np.int)*0 + 1 ]
     bu = observations*0.0
-    for i in xrange(2):
+    for i in range(2):
         bu[full_inversions, i] = np.min ( np.c_[
             np.ones_like (doys[full_inversions])*2.5e-3, 
             observations[full_inversions,i]*0.05], axis=1)
@@ -654,7 +654,7 @@ if __name__ == "__main__":
                 mask, [gp_vis, gp_nir], bu )
 
     x_dict = OrderedDict()
-    for p, v in the_state.default_values.iteritems():
+    for p, v in the_state.default_values.items():
         x_dict[p] = np.random.rand(len(state_grid))#np.ones_like ( state_grid )*v
 
     the_state.add_operator("Obs", obsop)

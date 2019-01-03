@@ -4,7 +4,7 @@ Functions and stuff that run eoldas inversions using the TIP.
 """
 import copy
 from multiprocessing.dummy import Pool
-import cPickle
+import pickle
 from collections import OrderedDict
 import traceback
 
@@ -86,8 +86,8 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
                                   optimisation_options=optimisation_options)
 
     # Load and prepare the emulators for the TIP
-    gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
-    gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+    gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
+    gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
     # Retieve observatiosn and ancillary stuff from database
     observations, mask, bu, passer_snow = retrieve_albedo ( year, fluxnet_site,
                                                        albedo_unc )    
@@ -116,8 +116,8 @@ def tip_inversion ( year, fluxnet_site, albedo_unc=[0.05, 0.07], green_leaves=Fa
     pool = Pool()
     results = pool.map ( f, dicts )
     best_solution = np.array([ x[0] for x in results]).argmin()
-    print [ x[0] for x in results]
-    print "Chosen cost: %g" % results[best_solution][0]
+    print([ x[0] for x in results])
+    print("Chosen cost: %g" % results[best_solution][0])
     # This is needed to do the forward calculations
     x = the_state.pack_from_dict ( results[best_solution][1]['real_map'])
     _ = the_state.cost ( x )
@@ -175,8 +175,8 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
                                   optimisation_options=optimisation_options )
 
     # Load and prepare the emulators for the TIP
-    gp_vis = cPickle.load(open(vis_emu_pkl, 'r'))
-    gp_nir = cPickle.load(open(nir_emu_pkl, 'r'))
+    gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
+    gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
     # Retieve observatiosn and ancillary stuff from database
     observations, mask, bu, passer_snow = retrieve_albedo ( year, fluxnet_site,
                                                        albedo_unc )
@@ -219,8 +219,8 @@ def regularised_tip_inversion ( year, fluxnet_site, gamma, x0, albedo_unc=[0.05,
             #####progressbar.value = progressbar.value + 1
 
     best_solution = np.array([ x[0] for x in results]).argmin()
-    print [ x[0] for x in results]
-    print "Chosen cost: %g" % results[best_solution][0]
+    print([ x[0] for x in results])
+    print("Chosen cost: %g" % results[best_solution][0])
     # This is needed to do the forward calculations
     x = the_state.pack_from_dict ( results[best_solution][1]['real_map'])
     _ = the_state.cost ( x )
