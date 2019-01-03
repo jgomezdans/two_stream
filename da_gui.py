@@ -192,8 +192,8 @@ def explore_twostream():
         param_vis = np.array([0.17, 1, 0.1, 2])
         param_nir = np.array([0.7, 2, 0.18, 2])
 
-        gp_vis = pickle.load(open(vis_emu_pkl, "r"))
-        gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+        gp_vis = pickle.load(open(vis_emu_pkl, "rb"), encoding="latin-1")
+        gp_nir = pickle.load(open(nir_emu_pkl, "rb"), encoding="latin-1")
         x = np.ones((n, 4)) * param_vis
         if parameter == "omega_vis":
             x[:, 0] = np.linspace(0, 0.9, n)

@@ -120,8 +120,8 @@ def single_inversion(year, site):
 
     vis_emu_pkl = "tip_vis_emulator_real.pkl"
     nir_emu_pkl = "tip_nir_emulator_real.pkl"
-    gp_vis = pickle.load(open(vis_emu_pkl, "r"))
-    gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+    gp_vis = pickle.load(open(vis_emu_pkl, "rb"), encoding="latin-1")
+    gp_nir = pickle.load(open(nir_emu_pkl, "rb"), encoding="latin-1")
     x0 = mu_prior
     state = np.zeros((46, 7))
 

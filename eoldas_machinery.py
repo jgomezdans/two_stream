@@ -72,7 +72,7 @@ def tip_inversion(
     parallel: bool
         Whether to run the minimisation in parallel or not
     progressbar: None or obj
-        A progressbar object to update 
+        A progressbar object to update
 
     Returns
     -------
@@ -97,8 +97,8 @@ def tip_inversion(
     )
 
     # Load and prepare the emulators for the TIP
-    gp_vis = pickle.load(open(vis_emu_pkl, "r"))
-    gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+    gp_vis = pickle.load(open(vis_emu_pkl, "rb"), encoding="latin-1")
+    gp_nir = pickle.load(open(nir_emu_pkl, "rb"), encoding="latin-1")
     # Retieve observatiosn and ancillary stuff from database
     observations, mask, bu, passer_snow = retrieve_albedo(
         year, fluxnet_site, albedo_unc
@@ -198,8 +198,8 @@ def regularised_tip_inversion(
     )
 
     # Load and prepare the emulators for the TIP
-    gp_vis = pickle.load(open(vis_emu_pkl, "r"))
-    gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+    gp_vis = pickle.load(open(vis_emu_pkl, "rb"), encoding="latin-1")
+    gp_nir = pickle.load(open(nir_emu_pkl, "rb"), encoding="latin-1")
     # Retieve observatiosn and ancillary stuff from database
     observations, mask, bu, passer_snow = retrieve_albedo(
         year, fluxnet_site, albedo_unc

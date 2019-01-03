@@ -103,7 +103,7 @@ class StandardStateTIP(State):
         output_name=None,
         verbose=False,
     ):
-        """Takes state configuration, state grid, and some common optional 
+        """Takes state configuration, state grid, and some common optional
         parameters.
         """
         self.state_config = state_config
@@ -194,21 +194,21 @@ class StandardStateTIP(State):
 
 
 class ObservationOperatorTIP(object):
-    """An operator calculating the "fit to the observations" using the 
+    """An operator calculating the "fit to the observations" using the
     Pinty's Two Stream RT model. The model here is used through emulation
     with Gaussian Processes. The layout of the code is slightly different
-    to the one we use typically because 
+    to the one we use typically because
     1. Each band has a different emulator,
     2. Each band uses a subset of the parameters,
     3. Only two emulators are required for the entire time series.
-    
+
     TODO The coding could be more flexible, as we could potentially use
     this for other ObsOps (e.g. SAR, passive microwaves, etc.)
     """
 
     def __init__(self, state_grid, state, observations, mask, emulators, bu):
         """
-         observations is an array with `n_observations`, `n_bands`, and in 
+         observations is an array with `n_observations`, `n_bands`, and in
          reality, `n_bands` should always be 2 (VIS & NIR). The mask just
          has two columns, the DoY and a bunch of 1s or 0s (the former
          indicating it's OK, the latter indicating it's a bad observation).
@@ -231,7 +231,7 @@ class ObservationOperatorTIP(object):
     def der_cost(self, x_dict, state_config):
 
         """The cost function and its partial derivatives. One important thing
-        to note is that GPs have been parameterised in transformed space, 
+        to note is that GPs have been parameterised in transformed space,
         whereas `x_dict` is in "real space". So when we go over the parameter
         dictionary, we need to transform back to linear units. TODO Clearly, it
         might be better to have cost functions that report whether they need
@@ -243,13 +243,13 @@ class ObservationOperatorTIP(object):
             The state as a dictionary
         state_config: oredered dict
             The configuration dictionary
-        
+
         Returns
         --------
         cost: float
             The value of the cost function
         der_cost: array
-            An array with the partial derivatives of the cost function        
+            An array with the partial derivatives of the cost function
         """
         i = 0
         cost = 0.0
@@ -386,7 +386,7 @@ class ObservationOperatorTIP(object):
 
     def calc_mismatch(self, itime, obs, bu):
         """Simplified mismatch function assuming that both the forward model
-        and associated Jacobian of the forward model have already been 
+        and associated Jacobian of the forward model have already been
         calculated and are stored in e.g. `self.fwd_albedo{vis,nir}`. There are
         some assumptions about the data storage made at this stage!"""
 
@@ -417,13 +417,13 @@ class ObservationOperatorTIP(object):
 
     def der_der_cost(self, x_dict, state_config, state, epsilon=1.0e-2):
         """Numerical approximation to the Hessian. This approximation is quite
-        simple, and is based on a finite differences of the individual terms of 
+        simple, and is based on a finite differences of the individual terms of
         the cost function. Note that this method shares a lot with the `der_cost`
         method in the same function, and a refactoring is probably required, or
         even better, a more "analytic" expression making use of the properties of
         GPs to calculate the second derivatives.
-                
-                
+
+
         Parameters
         -----------
         x_dict: ordered dict
@@ -675,8 +675,10 @@ if __name__ == "__main__":
         optimisation_options=optimisation_options,
     )
 
-    gp_vis = pickle.load(open("tip_vis_albedo_transformed.pkl", "r"))
-    gp_nir = pickle.load(open("tip_nir_albedo_transformed.pkl", "r"))
+    gp_vis = pickle.load(open("tip_vis_albedo_transformed.pkl", "rb"),
+                         encoding="latin-1")
+    gp_nir = pickle.load(open("tip_nir_albedo_transformed.pkl", "rb"),
+                         endoding="latin-1")
 
     obs = Observations("albedo.sql")
     albedo_data = obs.query(2009, "US-Bo1")

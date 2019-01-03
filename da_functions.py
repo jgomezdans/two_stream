@@ -112,8 +112,8 @@ def visualise_twostream(
     param_vis = np.array([0.17, 1, 0.1, 2])
     param_nir = np.array([0.7, 2, 0.18, 2])
 
-    gp_vis = pickle.load(open(vis_emu_pkl, "r"))
-    gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+    gp_vis = pickle.load(open(vis_emu_pkl, "rb"), encoding="latin-1")
+    gp_nir = pickle.load(open(nir_emu_pkl, "rb"), encoding="latin-1")
     if not only_one_set(
         omega_vis, d_vis, a_vis, omega_nir, d_nir, a_nir, lai_vis, lai_nir
     ):
@@ -166,7 +166,7 @@ def visualise_twostream(
         return
 
 
-def visualise_albedos(fluxnet_site, year):
+ def visualise_albedos(fluxnet_site, year):
     """A function that will visualise albedo data for a particular year and site"""
     observations, mask, bu, passer_snow = retrieve_albedo(
         year, fluxnet_site, [0.05, 0.07]
@@ -209,7 +209,7 @@ def visualise_albedos(fluxnet_site, year):
     ax1.xaxis.set_ticks_position("bottom")
 
 
-def single_observation_inversion(
+def  single_observation_inversion(
     fluxnet_site, year, green_leaves=False, n_tries=5
 ):
     """A function to do invert each individual observation in a time series. """
@@ -318,7 +318,7 @@ def single_observation_inversion(
     )
 
 
-def regularised_inversion(
+def regu larised_inversion(
     fluxnet_site,
     year,
     green_leaves,
@@ -448,7 +448,7 @@ def regularised_inversion(
     )
 
 
-def prior_experiment(
+ def prior_experiment(
     fluxnet_site,
     year,
     gamma_lai,
