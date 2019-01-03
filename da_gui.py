@@ -7,15 +7,32 @@ from IPython.display import display
 # Lots of different places that widgets could come from...
 
 try:
-    from ipywidgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox, IntProgress
+    from ipywidgets import (
+        interact,
+        FloatSlider,
+        IntSlider,
+        Dropdown,
+        Checkbox,
+        IntProgress,
+    )
 except ImportError:
     try:
-        from IPython.html.widgets import interact, FloatSlider, IntSlider, Dropdown, Checkbox, IntProgress
+        from IPython.html.widgets import (
+            interact,
+            FloatSlider,
+            IntSlider,
+            Dropdown,
+            Checkbox,
+            IntProgress,
+        )
     except ImportError:
         try:
-            from IPython.html.widgets import (interact, CheckboxWidget as Checkbox,
-                                              FloatSliderWidget as FloatSlider,
-                                              IntSliderWidget as IntSlider)
+            from IPython.html.widgets import (
+                interact,
+                CheckboxWidget as Checkbox,
+                FloatSliderWidget as FloatSlider,
+                IntSliderWidget as IntSlider,
+            )
         except ImportError:
             pass
 
@@ -25,7 +42,7 @@ from eoldas_ng import Prior
 from tip_helpers import retrieve_albedo
 from eoldas_machinery import tip_inversion, regularised_tip_inversion
 
-logo = plt.imread ( "nceologo200.png")
+logo = plt.imread("nceologo200.png")
 
 sites = """AU-Tum (Tumbarumba)
 BR-Cax (Caxiuana Forest-Almeirim)
@@ -50,10 +67,12 @@ US-Ne1 (Mead - irrigated continuous maize site)
 US-Ne2 (Mead - irrigated maize-soybean rotation site)
 US-Ne3 (Mead - rainfed maize-soybean rotation site)
 US-Ton (Tonzi Ranch)
-ZA-Kru (Skukuza)""".split("\n")
+ZA-Kru (Skukuza)""".split(
+    "\n"
+)
 
 
-sites="""AU-Tum
+sites = """AU-Tum
 BR-Cax
 CA-Ca1
 DE-Geb
@@ -76,143 +95,191 @@ US-Me3
 US-MMS
 US-Ton
 SE-Abi
-ZA-Kru""".split("\n")
+ZA-Kru""".split(
+    "\n"
+)
 
-tip_params = [ r'$\omega_{vis}\; [-]$', r'$d_{vis}\; [-]$', r'$\alpha_{vis}\; [-]$',
-              r'$\omega_{nir}\; [-]$', r'$d_{nir}\; [-]$', r'$\alpha_{nir}\; [-]$',
-              r'$LAI_{eff}\;[m^{2}m^{-2}]$' ]
+tip_params = [
+    r"$\omega_{vis}\; [-]$",
+    r"$d_{vis}\; [-]$",
+    r"$\alpha_{vis}\; [-]$",
+    r"$\omega_{nir}\; [-]$",
+    r"$d_{nir}\; [-]$",
+    r"$\alpha_{nir}\; [-]$",
+    r"$LAI_{eff}\;[m^{2}m^{-2}]$",
+]
 
 
 def visualise_albedos():
-
-    @interact ( fluxnet_site=Dropdown(options=sites), year=IntSlider(min=2004,max=2013, step=1))
-    def plot_albedos ( fluxnet_site, year ):
-        observations, mask, bu, passer_snow = retrieve_albedo(year, fluxnet_site,
-                                                              [0.05, 0.07])
-        passer = mask[:,1] == 1
+    @interact(
+        fluxnet_site=Dropdown(options=sites),
+        year=IntSlider(min=2004, max=2013, step=1),
+    )
+    def plot_albedos(fluxnet_site, year):
+        observations, mask, bu, passer_snow = retrieve_albedo(
+            year, fluxnet_site, [0.05, 0.07]
+        )
+        passer = mask[:, 1] == 1
         doys = mask[:, 0]
-        plt.figure ( figsize=(12,6))
-        plt.plot ( doys[passer], observations[passer, 0], 'o', label="Visible Albedo")
-        plt.plot ( doys[passer], observations[passer, 1], 'o', label="Near-infrarred Albedo")
-        plt.vlines ( doys[passer], observations[passer, 0] + 1.96*bu[passer,0],
-                     observations[passer, 0] - 1.96 * bu[passer, 0])
-        plt.vlines ( doys[passer], observations[passer, 1] + 1.96*bu[passer,1],
-                     observations[passer, 1] - 1.96 * bu[passer, 1])
+        plt.figure(figsize=(12, 6))
+        plt.plot(
+            doys[passer], observations[passer, 0], "o", label="Visible Albedo"
+        )
+        plt.plot(
+            doys[passer],
+            observations[passer, 1],
+            "o",
+            label="Near-infrarred Albedo",
+        )
+        plt.vlines(
+            doys[passer],
+            observations[passer, 0] + 1.96 * bu[passer, 0],
+            observations[passer, 0] - 1.96 * bu[passer, 0],
+        )
+        plt.vlines(
+            doys[passer],
+            observations[passer, 1] + 1.96 * bu[passer, 1],
+            observations[passer, 1] - 1.96 * bu[passer, 1],
+        )
         plt.legend(loc="best", numpoints=1, fancybox=True, shadow=True)
         plt.ylabel("Bi-hemispherical reflectance [-]")
-        plt.xlabel("DoY/%d" % year )
-        plt.xlim ( 1, 368)
-        plt.ylim ( 0, 0.7)
+        plt.xlabel("DoY/%d" % year)
+        plt.xlim(1, 368)
+        plt.ylim(0, 0.7)
         ax1 = plt.gca()
-        ax1.figure.figimage(logo, 60, 60, alpha=.1, zorder=1)
+        ax1.figure.figimage(logo, 60, 60, alpha=0.1, zorder=1)
 
         # Hide the right and top spines
-        ax1.spines['right'].set_visible(False)
-        ax1.spines['top'].set_visible(False)
+        ax1.spines["right"].set_visible(False)
+        ax1.spines["top"].set_visible(False)
         # Only show ticks on the left and bottom spines
-        ax1.yaxis.set_ticks_position('left')
-        ax1.xaxis.set_ticks_position('bottom')
+        ax1.yaxis.set_ticks_position("left")
+        ax1.xaxis.set_ticks_position("bottom")
 
-def plot_albedo ( albedo, x, xlabel):
 
-    plt.plot ( x, albedo, 'o-', mfc="none")
+def plot_albedo(albedo, x, xlabel):
+
+    plt.plot(x, albedo, "o-", mfc="none")
     ax = plt.gca()
     ax.set_xlabel(xlabel)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
     # Only show ticks on the left and bottom spines
-    ax.yaxis.set_ticks_position('left')
-    ax.xaxis.set_ticks_position('bottom')
-    
-    
-def explore_twostream():
-    @interact ( parameter=Dropdown(options=["omega_vis", "d_vis", "a_vis", "lai_vis",
-                                               "omega_nir", "d_nir", "a_nir", "lai_nir"]))
-                            
+    ax.yaxis.set_ticks_position("left")
+    ax.xaxis.set_ticks_position("bottom")
 
-    def visualise_twostream ( parameter):
-        vis_emu_pkl="tip_vis_emulator_real.pkl"
-        nir_emu_pkl="tip_nir_emulator_real.pkl" 
-        
+
+def explore_twostream():
+    @interact(
+        parameter=Dropdown(
+            options=[
+                "omega_vis",
+                "d_vis",
+                "a_vis",
+                "lai_vis",
+                "omega_nir",
+                "d_nir",
+                "a_nir",
+                "lai_nir",
+            ]
+        )
+    )
+    def visualise_twostream(parameter):
+        vis_emu_pkl = "tip_vis_emulator_real.pkl"
+        nir_emu_pkl = "tip_nir_emulator_real.pkl"
+
         n = 20
-        param_vis = np.array([0.17,1, 0.1,2])
+        param_vis = np.array([0.17, 1, 0.1, 2])
         param_nir = np.array([0.7, 2, 0.18, 2])
 
-        gp_vis = pickle.load(open(vis_emu_pkl, 'r'))
-        gp_nir = pickle.load(open(nir_emu_pkl, 'r'))
-        x = np.ones ((n,4)) * param_vis
+        gp_vis = pickle.load(open(vis_emu_pkl, "r"))
+        gp_nir = pickle.load(open(nir_emu_pkl, "r"))
+        x = np.ones((n, 4)) * param_vis
         if parameter == "omega_vis":
-            x[:,0] = np.linspace(0, 0.9, n)
-            albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_vis,  np.linspace(0, 0.9, n), parameter )
+            x[:, 0] = np.linspace(0, 0.9, n)
+            albedo_vis = gp_vis.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_vis, np.linspace(0, 0.9, n), parameter)
             return
         elif parameter == "d_vis":
-            x[:,1] = np.linspace(0.2, 4, n)
-            albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_vis,  np.linspace(0.2,4, n), parameter )
+            x[:, 1] = np.linspace(0.2, 4, n)
+            albedo_vis = gp_vis.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_vis, np.linspace(0.2, 4, n), parameter)
             return
         elif parameter == "a_vis":
             x[:, 2] = np.linspace(0, 0.9, n)
-            albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_vis,  np.linspace(0,0.9, n), parameter )
+            albedo_vis = gp_vis.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_vis, np.linspace(0, 0.9, n), parameter)
             return
         elif parameter == "lai_vis":
-            x[:, 3] = np.linspace(0,6, n)
-            albedo_vis = gp_vis.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_vis,  np.linspace(0,6, n), parameter )
+            x[:, 3] = np.linspace(0, 6, n)
+            albedo_vis = gp_vis.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_vis, np.linspace(0, 6, n), parameter)
             return
 
-
-        x = np.ones (( n,4))* param_nir
+        x = np.ones((n, 4)) * param_nir
         if parameter == "omega_nir":
-            x[:,0] = np.linspace(0, 0.9, n)
-            albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_nir,  np.linspace(0, 0.9, n), parameter )
+            x[:, 0] = np.linspace(0, 0.9, n)
+            albedo_nir = gp_nir.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_nir, np.linspace(0, 0.9, n), parameter)
             return
         elif parameter == "d_nir":
-            x[:,1] = np.linspace(0.2, 4, n)
-            albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_nir,  np.linspace(0.2,4, n), parameter )
+            x[:, 1] = np.linspace(0.2, 4, n)
+            albedo_nir = gp_nir.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_nir, np.linspace(0.2, 4, n), parameter)
             return
         elif parameter == "a_nir":
             x[:, 2] = np.linspace(0, 0.9, n)
-            albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_nir,  np.linspace(0,0.9, n), parameter )
+            albedo_nir = gp_nir.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_nir, np.linspace(0, 0.9, n), parameter)
             return
         elif parameter == "lai_nir":
-            x[:, 3] = np.linspace(0,6, n)
-            albedo_nir = gp_nir.predict ( x, do_unc=False)[0]
-            plot_albedo ( albedo_nir,  np.linspace(0,6, n), parameter )
+            x[:, 3] = np.linspace(0, 6, n)
+            albedo_nir = gp_nir.predict(x, do_unc=False)[0]
+            plot_albedo(albedo_nir, np.linspace(0, 6, n), parameter)
             return
-
 
 
 def single_observation_inversion():
-    @interact ( fluxnet_site=Dropdown(options=sites),
-                year=IntSlider(min=2004,max=2013, step=1),
-                green_leaves=Checkbox(description="Assume green leaves", 
-                default=False),
-                __manual=True )
-    def tip_single_observation ( fluxnet_site, year, green_leaves,
-                                       n_tries=10 ):
+    @interact(
+        fluxnet_site=Dropdown(options=sites),
+        year=IntSlider(min=2004, max=2013, step=1),
+        green_leaves=Checkbox(
+            description="Assume green leaves", default=False
+        ),
+        __manual=True,
+    )
+    def tip_single_observation(fluxnet_site, year, green_leaves, n_tries=10):
 
         f = IntProgress(min=0, max=n_tries + 1)
         f.value = 1
         display(f)
 
-        retval_s, state, obs = tip_inversion( year, fluxnet_site,
-                                              green_leaves=green_leaves,
-                                              n_tries=n_tries, progressbar=f)
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-
+        retval_s, state, obs = tip_inversion(
+            year,
+            fluxnet_site,
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
 
         fig, axs = plt.subplots(nrows=5, ncols=2, figsize=(14, 12))
         axs = axs.flatten()
         fig.suptitle("%s (%d)" % (fluxnet_site, year), fontsize=18)
-        params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        params = [
+            "omega_vis",
+            "d_vis",
+            "a_vis",
+            "omega_nir",
+            "d_nir",
+            "a_nir",
+            "lai",
+        ]
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
 
         for i, p in enumerate(tip_params):
@@ -222,39 +289,60 @@ def single_observation_inversion():
             # plt.fill_between ( state.state_grid, retval['real_ci25pc'][p],
             #                   retval['real_ci75pc'][p], color="0.6" )
 
-            axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
-                           mu[(i*46):((i+1)*46)][0] - c[(i * 46):((i + 1) * 46)][0], color="0.9" )
+            axs[i].axhspan(
+                mu[(i * 46) : ((i + 1) * 46)][0]
+                + c[(i * 46) : ((i + 1) * 46)][0],
+                mu[(i * 46) : ((i + 1) * 46)][0]
+                - c[(i * 46) : ((i + 1) * 46)][0],
+                color="0.9",
+            )
 
-            axs[i].plot(state.state_grid, mu[(i * 46):((i + 1) * 46)], '--')
-            axs[i].plot(state.state_grid, retval_s['real_map'][params[i]], 'o-', mfc="none")
+            axs[i].plot(state.state_grid, mu[(i * 46) : ((i + 1) * 46)], "--")
+            axs[i].plot(
+                state.state_grid,
+                retval_s["real_map"][params[i]],
+                "o-",
+                mfc="none",
+            )
 
-            axs[i].vlines ( state.state_grid, retval_s['real_map'][params[i]] - post_sd[(i*46):((i+1)*46)],
-                            retval_s['real_map'][params[i]] + post_sd[(i*46):((i+1)*46)], lw=0.8, colors="0.1", alpha=0.5)
+            axs[i].vlines(
+                state.state_grid,
+                retval_s["real_map"][params[i]]
+                - post_sd[(i * 46) : ((i + 1) * 46)],
+                retval_s["real_map"][params[i]]
+                + post_sd[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                colors="0.1",
+                alpha=0.5,
+            )
 
-
-
-            if i in [ 1, 4, 6]:
+            if i in [1, 4, 6]:
                 axs[i].set_ylim(0, 6)
             else:
                 axs[i].set_ylim(0, 1)
-            axs[i].set_ylabel( tip_params[i] )
+            axs[i].set_ylabel(tip_params[i])
 
         fwd = np.array(obs.fwd_modelled_obs)
-        axs[7].plot(obs.observations[:, 0], fwd[:, 0], 'k+', label="VIS")
-        axs[7].plot(obs.observations[:, 1], fwd[:, 1], 'rx', label="NIR")
+        axs[7].plot(obs.observations[:, 0], fwd[:, 0], "k+", label="VIS")
+        axs[7].plot(obs.observations[:, 1], fwd[:, 1], "rx", label="NIR")
         axs[7].set_xlabel("Measured BHR [-]")
         axs[7].set_ylabel("Predicted BHR [-]")
-        axs[7].plot ( [0,0.9], [0, 0.9], 'k--', lw=0.5)
-        axs[7].legend(loc='best')
+        axs[7].plot([0, 0.9], [0, 0.9], "k--", lw=0.5)
+        axs[7].legend(loc="best")
 
+        axs[8].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
+            obs.observations[:, 0] + 1.96 * obs.bu[:, 0],
+        )
+        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], "o")
 
-        axs[8].vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
-                      obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
-        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
-
-        axs[9].vlines(obs.mask[:, 0], obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
-                      obs.observations[:, 1] + 1.96 * obs.bu[:, 1])
-        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], 'o')
+        axs[9].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
+            obs.observations[:, 1] + 1.96 * obs.bu[:, 1],
+        )
+        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], "o")
 
         axs[8].set_ylabel("BHR VIS [-]")
         axs[9].set_ylabel("BHR NIR [-]")
@@ -266,89 +354,148 @@ def single_observation_inversion():
             if i != 7:
                 axs[i].set_xlim(1, 370)
             # Hide the right and top spines
-            axs[i].spines['right'].set_visible(False)
-            axs[i].spines['top'].set_visible(False)
+            axs[i].spines["right"].set_visible(False)
+            axs[i].spines["top"].set_visible(False)
             # Only show ticks on the left and bottom spines
-            axs[i].yaxis.set_ticks_position('left')
-            axs[i].xaxis.set_ticks_position('bottom')
+            axs[i].yaxis.set_ticks_position("left")
+            axs[i].xaxis.set_ticks_position("bottom")
 
-        fig.figimage(logo, fig.bbox.xmax - 500, fig.bbox.ymax - 250, alpha=.4, zorder=1)
-        plt.savefig( "single_obs_inversion_%s_%04d.pdf" % ( fluxnet_site, year), dpi=300, boox_inches="tight")
+        fig.figimage(
+            logo,
+            fig.bbox.xmax - 500,
+            fig.bbox.ymax - 250,
+            alpha=0.4,
+            zorder=1,
+        )
+        plt.savefig(
+            "single_obs_inversion_%s_%04d.pdf" % (fluxnet_site, year),
+            dpi=300,
+            boox_inches="tight",
+        )
 
-def regularised_inversion ( ):
 
-    @interact ( fluxnet_site=Dropdown(options=sites),
-                year=IntSlider(min=2004,max=2013, step=1),
-                gamma_lai=FloatSlider(min=0.1, max=15, step=0.2, default=1.),
-                green_leaves=Checkbox(description="Green leaves", default=False),
-                __manual=True )
-    def eoldas_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
-                                       n_tries=10 ):
-        f = IntProgress(min=0, max=2*n_tries + 1)
+def regularised_inversion():
+    @interact(
+        fluxnet_site=Dropdown(options=sites),
+        year=IntSlider(min=2004, max=2013, step=1),
+        gamma_lai=FloatSlider(min=0.1, max=15, step=0.2, default=1.0),
+        green_leaves=Checkbox(description="Green leaves", default=False),
+        __manual=True,
+    )
+    def eoldas_inversion(
+        fluxnet_site, year, green_leaves, gamma_lai, n_tries=10
+    ):
+        f = IntProgress(min=0, max=2 * n_tries + 1)
         f.value = 1
         display(f)
 
-        retval_s, state, obs = tip_inversion( year, fluxnet_site, green_leaves=green_leaves,
-                                              n_tries=n_tries, progressbar=f )
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        retval_s, state, obs = tip_inversion(
+            year,
+            fluxnet_site,
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd_single = np.where(post_sd > c, c, post_sd)
 
-        retval, state, obs = regularised_tip_inversion( year, fluxnet_site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai  ],
-                                                        x0=retval_s['real_map'], green_leaves=green_leaves,
-                                                        n_tries=n_tries, progressbar=f)
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        retval, state, obs = regularised_tip_inversion(
+            year,
+            fluxnet_site,
+            [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai],
+            x0=retval_s["real_map"],
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
-
 
         fig, axs = plt.subplots(nrows=5, ncols=2, figsize=(14, 12))
         axs = axs.flatten()
         fig.suptitle("%s (%d)" % (fluxnet_site, year), fontsize=18)
-        params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-        post_sd = np.sqrt(np.array(retval['post_cov'].todense()).squeeze())
+        params = [
+            "omega_vis",
+            "d_vis",
+            "a_vis",
+            "omega_nir",
+            "d_nir",
+            "a_nir",
+            "lai",
+        ]
+        post_sd = np.sqrt(np.array(retval["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
 
         for i, p in enumerate(tip_params):
 
-            #axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
+            # axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
             #               mu[(i*46):((i+1)*46)][0] - c[(i * 46):((i + 1) * 46)][0], color="0.9" )
 
-
-
-            axs[i].fill_between ( state.state_grid, retval['real_map'][params[i]] - post_sd[(i*46):((i+1)*46)],
-                            retval['real_map'][params[i]] + post_sd[(i*46):((i+1)*46)], lw=0.8, color="0.8")
-            axs[i].vlines ( state.state_grid, retval_s['real_map'][params[i]] - post_sd_single[(i*46):((i+1)*46)],
-                            retval_s['real_map'][params[i]] + post_sd_single[(i*46):((i+1)*46)], lw=0.8,
-                            colors="0.1", alpha=0.5)
-            axs[i].plot(state.state_grid, retval['real_map'][params[i]], 'o-', mfc="none")
-            axs[i].plot(state.state_grid, retval_s['real_map'][params[i]], '--')
-            if i in [ 1, 4, 6]:
+            axs[i].fill_between(
+                state.state_grid,
+                retval["real_map"][params[i]]
+                - post_sd[(i * 46) : ((i + 1) * 46)],
+                retval["real_map"][params[i]]
+                + post_sd[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                color="0.8",
+            )
+            axs[i].vlines(
+                state.state_grid,
+                retval_s["real_map"][params[i]]
+                - post_sd_single[(i * 46) : ((i + 1) * 46)],
+                retval_s["real_map"][params[i]]
+                + post_sd_single[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                colors="0.1",
+                alpha=0.5,
+            )
+            axs[i].plot(
+                state.state_grid,
+                retval["real_map"][params[i]],
+                "o-",
+                mfc="none",
+            )
+            axs[i].plot(
+                state.state_grid, retval_s["real_map"][params[i]], "--"
+            )
+            if i in [1, 4, 6]:
                 axs[i].set_ylim(0, 6)
             else:
                 axs[i].set_ylim(0, 1)
-            axs[i].set_ylabel( tip_params[i] )
+            axs[i].set_ylabel(tip_params[i])
 
         fwd = np.array(obs.fwd_modelled_obs)
-        axs[7].plot(obs.observations[:, 0], fwd[:, 0], 'k+', label="VIS")
-        axs[7].plot(obs.observations[:, 1], fwd[:, 1], 'rx', label="NIR")
+        axs[7].plot(obs.observations[:, 0], fwd[:, 0], "k+", label="VIS")
+        axs[7].plot(obs.observations[:, 1], fwd[:, 1], "rx", label="NIR")
         axs[7].set_xlabel("Measured BHR [-]")
         axs[7].set_ylabel("Predicted BHR [-]")
-        axs[7].plot ( [0,0.9], [0, 0.9], 'k--', lw=0.5)
-        axs[7].legend(loc='best')
+        axs[7].plot([0, 0.9], [0, 0.9], "k--", lw=0.5)
+        axs[7].legend(loc="best")
 
+        axs[8].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
+            obs.observations[:, 0] + 1.96 * obs.bu[:, 0],
+        )
+        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], "o")
 
-        axs[8].vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
-                      obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
-        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
-
-        axs[9].vlines(obs.mask[:, 0], obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
-                      obs.observations[:, 1] + 1.96 * obs.bu[:, 1])
-        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], 'o')
+        axs[9].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
+            obs.observations[:, 1] + 1.96 * obs.bu[:, 1],
+        )
+        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], "o")
 
         axs[8].set_ylabel("BHR VIS [-]")
         axs[9].set_ylabel("BHR NIR [-]")
@@ -360,96 +507,159 @@ def regularised_inversion ( ):
             if i != 7:
                 axs[i].set_xlim(1, 370)
             # Hide the right and top spines
-            axs[i].spines['right'].set_visible(False)
-            axs[i].spines['top'].set_visible(False)
+            axs[i].spines["right"].set_visible(False)
+            axs[i].spines["top"].set_visible(False)
             # Only show ticks on the left and bottom spines
-            axs[i].yaxis.set_ticks_position('left')
-            axs[i].xaxis.set_ticks_position('bottom')
+            axs[i].yaxis.set_ticks_position("left")
+            axs[i].xaxis.set_ticks_position("bottom")
 
-        fig.figimage(logo, fig.bbox.xmax - 500, fig.bbox.ymax - 250, alpha=.4, zorder=1)#if __name__ == "__main__":
-        plt.savefig("regularised_model_%s_%04d.pdf" % (fluxnet_site, year), dpi=300, bbox_inches="tight")
+        fig.figimage(
+            logo,
+            fig.bbox.xmax - 500,
+            fig.bbox.ymax - 250,
+            alpha=0.4,
+            zorder=1,
+        )  # if __name__ == "__main__":
+        plt.savefig(
+            "regularised_model_%s_%04d.pdf" % (fluxnet_site, year),
+            dpi=300,
+            bbox_inches="tight",
+        )
 
 
-def regularised_inversion_unc ( ):
-
-    @interact ( fluxnet_site=Dropdown(options=sites),
-                year=IntSlider(min=2004,max=2013, step=1),
-                albedo_unc_good=IntSlider(min=1, max=20, step=1, default=5),
-                albedo_unc_avg=IntSlider(min=1, max=20, step=1, default=7),
-                gamma_lai=FloatSlider(min=0.1, max=15, step=0.2, default=1.),
-                green_leaves=Checkbox(description="Green leaves", default=False),
-                __manual=True )
-    def eoldas_inversion ( fluxnet_site, year, green_leaves, gamma_lai,
-                          albedo_unc_avg, albedo_unc_good,
-                          n_tries=10  ):
-        f = IntProgress(min=0, max=2*n_tries + 1)
+def regularised_inversion_unc():
+    @interact(
+        fluxnet_site=Dropdown(options=sites),
+        year=IntSlider(min=2004, max=2013, step=1),
+        albedo_unc_good=IntSlider(min=1, max=20, step=1, default=5),
+        albedo_unc_avg=IntSlider(min=1, max=20, step=1, default=7),
+        gamma_lai=FloatSlider(min=0.1, max=15, step=0.2, default=1.0),
+        green_leaves=Checkbox(description="Green leaves", default=False),
+        __manual=True,
+    )
+    def eoldas_inversion(
+        fluxnet_site,
+        year,
+        green_leaves,
+        gamma_lai,
+        albedo_unc_avg,
+        albedo_unc_good,
+        n_tries=10,
+    ):
+        f = IntProgress(min=0, max=2 * n_tries + 1)
         f.value = 1
         display(f)
         # convert uncertainties from percent
-        albedo_unc = [ albedo_unc_good*0.01, albedo_unc_avg*0.01 ]
-        retval_s, state, obs = tip_inversion( year, fluxnet_site, albedo_unc=albedo_unc, 
-                                             green_leaves=green_leaves,
-                                            n_tries=n_tries, progressbar=f )
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        albedo_unc = [albedo_unc_good * 0.01, albedo_unc_avg * 0.01]
+        retval_s, state, obs = tip_inversion(
+            year,
+            fluxnet_site,
+            albedo_unc=albedo_unc,
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd_single = np.where(post_sd > c, c, post_sd)
 
-        retval, state, obs = regularised_tip_inversion( year, fluxnet_site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai  ],
-                                                       albedo_unc=albedo_unc,
-                                                        x0=retval_s['real_map'], green_leaves=green_leaves,
-                                                        n_tries=n_tries, progressbar=f)
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        retval, state, obs = regularised_tip_inversion(
+            year,
+            fluxnet_site,
+            [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai],
+            albedo_unc=albedo_unc,
+            x0=retval_s["real_map"],
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
-
 
         fig, axs = plt.subplots(nrows=5, ncols=2, figsize=(14, 12))
         axs = axs.flatten()
         fig.suptitle("%s (%d)" % (fluxnet_site, year), fontsize=18)
-        params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-        post_sd = np.sqrt(np.array(retval['post_cov'].todense()).squeeze())
+        params = [
+            "omega_vis",
+            "d_vis",
+            "a_vis",
+            "omega_nir",
+            "d_nir",
+            "a_nir",
+            "lai",
+        ]
+        post_sd = np.sqrt(np.array(retval["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
 
         for i, p in enumerate(tip_params):
 
-            #axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
+            # axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
             #               mu[(i*46):((i+1)*46)][0] - c[(i * 46):((i + 1) * 46)][0], color="0.9" )
 
-
-
-            axs[i].fill_between ( state.state_grid, retval['real_map'][params[i]] - post_sd[(i*46):((i+1)*46)],
-                            retval['real_map'][params[i]] + post_sd[(i*46):((i+1)*46)], lw=0.8, color="0.8")
-            axs[i].vlines ( state.state_grid, retval_s['real_map'][params[i]] - post_sd_single[(i*46):((i+1)*46)],
-                            retval_s['real_map'][params[i]] + post_sd_single[(i*46):((i+1)*46)], lw=0.8,
-                            colors="0.1", alpha=0.5)
-            axs[i].plot(state.state_grid, retval['real_map'][params[i]], 'o-', mfc="none")
-            axs[i].plot(state.state_grid, retval_s['real_map'][params[i]], '--')
-            if i in [ 1, 4, 6]:
+            axs[i].fill_between(
+                state.state_grid,
+                retval["real_map"][params[i]]
+                - post_sd[(i * 46) : ((i + 1) * 46)],
+                retval["real_map"][params[i]]
+                + post_sd[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                color="0.8",
+            )
+            axs[i].vlines(
+                state.state_grid,
+                retval_s["real_map"][params[i]]
+                - post_sd_single[(i * 46) : ((i + 1) * 46)],
+                retval_s["real_map"][params[i]]
+                + post_sd_single[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                colors="0.1",
+                alpha=0.5,
+            )
+            axs[i].plot(
+                state.state_grid,
+                retval["real_map"][params[i]],
+                "o-",
+                mfc="none",
+            )
+            axs[i].plot(
+                state.state_grid, retval_s["real_map"][params[i]], "--"
+            )
+            if i in [1, 4, 6]:
                 axs[i].set_ylim(0, 6)
             else:
                 axs[i].set_ylim(0, 1)
-            axs[i].set_ylabel( tip_params[i] )
+            axs[i].set_ylabel(tip_params[i])
 
         fwd = np.array(obs.fwd_modelled_obs)
-        axs[7].plot(obs.observations[:, 0], fwd[:, 0], 'k+', label="VIS")
-        axs[7].plot(obs.observations[:, 1], fwd[:, 1], 'rx', label="NIR")
+        axs[7].plot(obs.observations[:, 0], fwd[:, 0], "k+", label="VIS")
+        axs[7].plot(obs.observations[:, 1], fwd[:, 1], "rx", label="NIR")
         axs[7].set_xlabel("Measured BHR [-]")
         axs[7].set_ylabel("Predicted BHR [-]")
-        axs[7].plot ( [0,0.9], [0, 0.9], 'k--', lw=0.5)
-        axs[7].legend(loc='best')
+        axs[7].plot([0, 0.9], [0, 0.9], "k--", lw=0.5)
+        axs[7].legend(loc="best")
 
+        axs[8].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
+            obs.observations[:, 0] + 1.96 * obs.bu[:, 0],
+        )
+        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], "o")
 
-        axs[8].vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
-                      obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
-        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
-
-        axs[9].vlines(obs.mask[:, 0], obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
-                      obs.observations[:, 1] + 1.96 * obs.bu[:, 1])
-        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], 'o')
+        axs[9].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
+            obs.observations[:, 1] + 1.96 * obs.bu[:, 1],
+        )
+        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], "o")
 
         axs[8].set_ylabel("BHR VIS [-]")
         axs[9].set_ylabel("BHR NIR [-]")
@@ -461,105 +671,163 @@ def regularised_inversion_unc ( ):
             if i != 7:
                 axs[i].set_xlim(1, 370)
             # Hide the right and top spines
-            axs[i].spines['right'].set_visible(False)
-            axs[i].spines['top'].set_visible(False)
+            axs[i].spines["right"].set_visible(False)
+            axs[i].spines["top"].set_visible(False)
             # Only show ticks on the left and bottom spines
-            axs[i].yaxis.set_ticks_position('left')
-            axs[i].xaxis.set_ticks_position('bottom')
+            axs[i].yaxis.set_ticks_position("left")
+            axs[i].xaxis.set_ticks_position("bottom")
 
-        fig.figimage(logo, fig.bbox.xmax - 500, fig.bbox.ymax - 250, alpha=.4, zorder=1)
-        plt.savefig("regularised_model_%s_%04d_%02dpcnt_%02dpcnt.pdf" % (fluxnet_site, year, 
-                                        int(albedo_unc[0]*100.), int(albedo_unc[1]*100.)), 
-                                        dpi=300, bbox_inches="tight")
+        fig.figimage(
+            logo,
+            fig.bbox.xmax - 500,
+            fig.bbox.ymax - 250,
+            alpha=0.4,
+            zorder=1,
+        )
+        plt.savefig(
+            "regularised_model_%s_%04d_%02dpcnt_%02dpcnt.pdf"
+            % (
+                fluxnet_site,
+                year,
+                int(albedo_unc[0] * 100.0),
+                int(albedo_unc[1] * 100.0),
+            ),
+            dpi=300,
+            bbox_inches="tight",
+        )
 
 
-def prior_experiment ( ):
-
-    @interact ( fluxnet_site=Dropdown(options=sites),
-                year=IntSlider(min=2004,max=2013, step=1),
-                gamma_lai=FloatSlider(min=1e-5, max=1e5),
-                green_leaves=Checkbox(description="Green leaves", default=False),
-                __manual=True )
-
-    def eoldas_inversion ( fluxnet_site, year, n_years, green_leaves, gamma_lai,
-                                       n_tries=5 ):
-        f = IntProgress(min=0, max=2*n_tries + 1)
+def prior_experiment():
+    @interact(
+        fluxnet_site=Dropdown(options=sites),
+        year=IntSlider(min=2004, max=2013, step=1),
+        gamma_lai=FloatSlider(min=1e-5, max=1e5),
+        green_leaves=Checkbox(description="Green leaves", default=False),
+        __manual=True,
+    )
+    def eoldas_inversion(
+        fluxnet_site, year, n_years, green_leaves, gamma_lai, n_tries=5
+    ):
+        f = IntProgress(min=0, max=2 * n_tries + 1)
         f.value = 1
         display(f)
 
         prior_set = []
-        for train_year in range ( n_years ):
-            this_year = (year - n_years - 1)  + train_year
-            retval_s, state, obs = tip_inversion( this_year, fluxnet_site, green_leaves=green_leaves,
-                                              n_tries=2 )
-            prior_set.append ( retval_s )
-        mu_priors = np.array( [ state.__unpack_from_dict (p['real_map']) for p in prior_set ] )
-        cov_mtx = np.zeros (( 322, 322))
+        for train_year in range(n_years):
+            this_year = (year - n_years - 1) + train_year
+            retval_s, state, obs = tip_inversion(
+                this_year, fluxnet_site, green_leaves=green_leaves, n_tries=2
+            )
+            prior_set.append(retval_s)
+        mu_priors = np.array(
+            [state.__unpack_from_dict(p["real_map"]) for p in prior_set]
+        )
+        cov_mtx = np.zeros((322, 322))
         for p in prior_set:
-            cov_mtx = cov_mtx + p['hessian'].todense()
+            cov_mtx = cov_mtx + p["hessian"].todense()
 
-        prior = Prior ( mu_priors.mean(axis=0), cov_mtx )
+        prior = Prior(mu_priors.mean(axis=0), cov_mtx)
 
-
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd_single = np.where(post_sd > c, c, post_sd)
 
-        retval, state, obs = regularised_tip_inversion( year, fluxnet_site, [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai  ],
-                                                        x0=retval_s['real_map'], green_leaves=green_leaves,
-                                                        n_tries=n_tries, progressbar=f)
-        mu = state.operators['Prior'].mu
-        cinv = state.operators['Prior'].inv_cov
-        c = np.array(np.sqrt(np.linalg.inv (cinv.todense()).diagonal())).squeeze()
-        post_sd = np.sqrt(np.array(retval_s['post_cov'].todense()).squeeze())
+        retval, state, obs = regularised_tip_inversion(
+            year,
+            fluxnet_site,
+            [1e-3, 0, 0.1, 1e-3, 0, 0.1, gamma_lai],
+            x0=retval_s["real_map"],
+            green_leaves=green_leaves,
+            n_tries=n_tries,
+            progressbar=f,
+        )
+        mu = state.operators["Prior"].mu
+        cinv = state.operators["Prior"].inv_cov
+        c = np.array(
+            np.sqrt(np.linalg.inv(cinv.todense()).diagonal())
+        ).squeeze()
+        post_sd = np.sqrt(np.array(retval_s["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
-
 
         fig, axs = plt.subplots(nrows=5, ncols=2, figsize=(14, 12))
         axs = axs.flatten()
         fig.suptitle("%s (%d)" % (fluxnet_site, year), fontsize=18)
-        params = ['omega_vis', 'd_vis', 'a_vis', 'omega_nir', 'd_nir', 'a_nir', 'lai']
-        post_sd = np.sqrt(np.array(retval['post_cov'].todense()).squeeze())
+        params = [
+            "omega_vis",
+            "d_vis",
+            "a_vis",
+            "omega_nir",
+            "d_nir",
+            "a_nir",
+            "lai",
+        ]
+        post_sd = np.sqrt(np.array(retval["post_cov"].todense()).squeeze())
         post_sd = np.where(post_sd > c, c, post_sd)
 
         for i, p in enumerate(tip_params):
 
-            #axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
+            # axs[i].axhspan(mu[(i*46):((i+1)*46)][0]+c[(i*46):((i+1)*46)][0],
             #               mu[(i*46):((i+1)*46)][0] - c[(i * 46):((i + 1) * 46)][0], color="0.9" )
 
-
-
-            axs[i].fill_between ( state.state_grid, retval['real_map'][params[i]] - post_sd[(i*46):((i+1)*46)],
-                            retval['real_map'][params[i]] + post_sd[(i*46):((i+1)*46)], lw=0.8, color="0.8")
-            axs[i].vlines ( state.state_grid, retval_s['real_map'][params[i]] - post_sd_single[(i*46):((i+1)*46)],
-                            retval_s['real_map'][params[i]] + post_sd_single[(i*46):((i+1)*46)], lw=0.8,
-                            colors="0.1", alpha=0.5)
-            axs[i].plot(state.state_grid, retval['real_map'][params[i]], 'o-', mfc="none")
-            axs[i].plot(state.state_grid, retval_s['real_map'][params[i]], '--')
-            if i in [ 1, 4, 6]:
+            axs[i].fill_between(
+                state.state_grid,
+                retval["real_map"][params[i]]
+                - post_sd[(i * 46) : ((i + 1) * 46)],
+                retval["real_map"][params[i]]
+                + post_sd[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                color="0.8",
+            )
+            axs[i].vlines(
+                state.state_grid,
+                retval_s["real_map"][params[i]]
+                - post_sd_single[(i * 46) : ((i + 1) * 46)],
+                retval_s["real_map"][params[i]]
+                + post_sd_single[(i * 46) : ((i + 1) * 46)],
+                lw=0.8,
+                colors="0.1",
+                alpha=0.5,
+            )
+            axs[i].plot(
+                state.state_grid,
+                retval["real_map"][params[i]],
+                "o-",
+                mfc="none",
+            )
+            axs[i].plot(
+                state.state_grid, retval_s["real_map"][params[i]], "--"
+            )
+            if i in [1, 4, 6]:
                 axs[i].set_ylim(0, 6)
             else:
                 axs[i].set_ylim(0, 1)
-            axs[i].set_ylabel( tip_params[i] )
+            axs[i].set_ylabel(tip_params[i])
 
         fwd = np.array(obs.fwd_modelled_obs)
-        axs[7].plot(obs.observations[:, 0], fwd[:, 0], 'k+', label="VIS")
-        axs[7].plot(obs.observations[:, 1], fwd[:, 1], 'rx', label="NIR")
+        axs[7].plot(obs.observations[:, 0], fwd[:, 0], "k+", label="VIS")
+        axs[7].plot(obs.observations[:, 1], fwd[:, 1], "rx", label="NIR")
         axs[7].set_xlabel("Measured BHR [-]")
         axs[7].set_ylabel("Predicted BHR [-]")
-        axs[7].plot ( [0,0.9], [0, 0.9], 'k--', lw=0.5)
-        axs[7].legend(loc='best')
+        axs[7].plot([0, 0.9], [0, 0.9], "k--", lw=0.5)
+        axs[7].legend(loc="best")
 
+        axs[8].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
+            obs.observations[:, 0] + 1.96 * obs.bu[:, 0],
+        )
+        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], "o")
 
-        axs[8].vlines(obs.mask[:, 0], obs.observations[:, 0] - 1.96 * obs.bu[:, 0],
-                      obs.observations[:, 0] + 1.96 * obs.bu[:, 0])
-        axs[8].plot(obs.mask[:, 0], obs.observations[:, 0], 'o')
-
-        axs[9].vlines(obs.mask[:, 0], obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
-                      obs.observations[:, 1] + 1.96 * obs.bu[:, 1])
-        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], 'o')
+        axs[9].vlines(
+            obs.mask[:, 0],
+            obs.observations[:, 1] - 1.96 * obs.bu[:, 1],
+            obs.observations[:, 1] + 1.96 * obs.bu[:, 1],
+        )
+        axs[9].plot(obs.mask[:, 0], obs.observations[:, 1], "o")
 
         axs[8].set_ylabel("BHR VIS [-]")
         axs[9].set_ylabel("BHR NIR [-]")
@@ -571,10 +839,16 @@ def prior_experiment ( ):
             if i != 7:
                 axs[i].set_xlim(1, 370)
             # Hide the right and top spines
-            axs[i].spines['right'].set_visible(False)
-            axs[i].spines['top'].set_visible(False)
+            axs[i].spines["right"].set_visible(False)
+            axs[i].spines["top"].set_visible(False)
             # Only show ticks on the left and bottom spines
-            axs[i].yaxis.set_ticks_position('left')
-            axs[i].xaxis.set_ticks_position('bottom')
+            axs[i].yaxis.set_ticks_position("left")
+            axs[i].xaxis.set_ticks_position("bottom")
 
-        fig.figimage(logo, fig.bbox.xmax - 500, fig.bbox.ymax - 250, alpha=.4, zorder=1)#if __name__ == "__main__":
+        fig.figimage(
+            logo,
+            fig.bbox.xmax - 500,
+            fig.bbox.ymax - 250,
+            alpha=0.4,
+            zorder=1,
+        )  # if __name__ == "__main__":
